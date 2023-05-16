@@ -80,7 +80,7 @@ def randomPolicy(node):
             temp = node.state.getPossibleActions()
             action = random.choice(list(temp))
         except IndexError:
-            raise Exception("Non-terminal state has no possible actions: " + str(state))
+            raise Exception("Non-terminal state has no possible actions: " + str(node.state))
         newNode = treeNode(node.state.takeAction(action), node)
         node.children[action] = newNode
         if len(node.state.getPossibleActions()) == len(node.children):
@@ -115,7 +115,7 @@ class planState:
         self.currentStep = 0
         self.numberOfTables = numberOfTables
         self.queryEncode = queryEncode
-        self.order_list = np.zeros(config.max_hint_num, dtype=np.int)
+        self.order_list = np.zeros(config.max_hint_num, dtype=np.int64)
         self.joins = []
         self.joins_with_predicate = []
         # print("all_joins",len(all_joins))

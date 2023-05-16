@@ -5,22 +5,25 @@ import torch
 
 class Config:
     def __init__(self, ):
-        self.datafile = 'JOBqueries.workload'
-        self.schemaFile = "schema.sql"
-        self.database = 'imdb'
+        self.datafile = 'JOBqueries.workload'  # # unused
+        self.schemaFile = "schema.sql"  # # unused
+        self.database = 'imdbload'
         self.user = 'bing'
         self.password = "bing"
-        self.dataset = 'JOB'
+        self.dataset = 'JOB'  # # unused
         self.userName = self.user
-        self.usegpu = True
+        self.usegpu = False  # # unused
         self.head_num = 10
         self.input_size = 9
         self.hidden_size = 64
         self.batch_size = 256
         self.ip = "127.0.0.1"
         self.port = 5432
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.cpudevice = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.cpudevice = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
+        self.cpudevice = torch.device("cpu")
         self.var_weight = 0.00  # for au, 0:disable,0.01:enable
         self.max_column = 100
         self.max_alias_num = 40

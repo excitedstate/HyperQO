@@ -1,19 +1,21 @@
-from tkinter import E
 import numpy as np
+
+
 class Expr:
-    def __init__(self, expr,list_kind = 0):
+    def __init__(self, expr, list_kind=0):
         self.expr = expr
         self.list_kind = list_kind
         self.isInt = False
         self.val = 0
-    def isCol(self,):
+
+    def isCol(self, ):
         return isinstance(self.expr, dict) and "ColumnRef" in self.expr
 
     def getValue(self, value_expr):
         if "A_Const" in value_expr:
             value = value_expr["A_Const"]["val"]
             if "String" in value:
-                return "'" + value["String"]["str"].replace("'","''")+"\'"
+                return "'" + value["String"]["str"].replace("'", "''") + "\'"
             elif "Integer" in value:
                 self.isInt = True
                 self.val = value["Integer"]["ival"]
@@ -21,33 +23,37 @@ class Expr:
             else:
                 raise "unknown Value in Expr"
         elif "TypeCast" in value_expr:
-            if len(value_expr["TypeCast"]['typeName']['TypeName']['names'])==1:
-                return value_expr["TypeCast"]['typeName']['TypeName']['names'][0]['String']['str']+" '"+value_expr["TypeCast"]['arg']['A_Const']['val']['String']['str']+"'"
+            if len(value_expr["TypeCast"]['typeName']['TypeName']['names']) == 1:
+                return value_expr["TypeCast"]['typeName']['TypeName']['names'][0]['String']['str'] + " '" + \
+                    value_expr["TypeCast"]['arg']['A_Const']['val']['String']['str'] + "'"
             else:
-                if value_expr["TypeCast"]['typeName']['TypeName']['typmods'][0]['A_Const']['val']['Integer']['ival']==2:
-                    return value_expr["TypeCast"]['typeName']['TypeName']['names'][1]['String']['str']+" '"+value_expr["TypeCast"]['arg']['A_Const']['val']['String']['str']+ "' month"
+                if value_expr["TypeCast"]['typeName']['TypeName']['typmods'][0]['A_Const']['val']['Integer'][
+                    'ival'] == 2:
+                    return value_expr["TypeCast"]['typeName']['TypeName']['names'][1]['String']['str'] + " '" + \
+                        value_expr["TypeCast"]['arg']['A_Const']['val']['String']['str'] + "' month"
                 else:
-                    return value_expr["TypeCast"]['typeName']['TypeName']['names'][1]['String']['str']+" '"+value_expr["TypeCast"]['arg']['A_Const']['val']['String']['str']+ "' year"
+                    return value_expr["TypeCast"]['typeName']['TypeName']['names'][1]['String']['str'] + " '" + \
+                        value_expr["TypeCast"]['arg']['A_Const']['val']['String']['str'] + "' year"
         else:
             print(value_expr.keys())
             raise "unknown Value in Expr"
 
-    def getAliasName(self,):
+    def getAliasName(self, ):
         return self.expr["ColumnRef"]["fields"][0]["String"]["str"]
 
-    def getColumnName(self,):
+    def getColumnName(self, ):
         return self.expr["ColumnRef"]["fields"][1]["String"]["str"]
 
-    def __str__(self,):
+    def __str__(self, ):
         if self.isCol():
-            return self.getAliasName()+"."+self.getColumnName()
+            return self.getAliasName() + "." + self.getColumnName()
         elif isinstance(self.expr, dict) and "A_Const" in self.expr:
             return self.getValue(self.expr)
         elif isinstance(self.expr, dict) and "TypeCast" in self.expr:
             return self.getValue(self.expr)
         elif isinstance(self.expr, list):
             if self.list_kind == 6:
-                return "("+",\n".join([self.getValue(x) for x in self.expr])+")"
+                return "(" + ",\n".join([self.getValue(x) for x in self.expr]) + ")"
             elif self.list_kind == 10:
                 return " AND ".join([self.getValue(x) for x in self.expr])
             else:
@@ -63,20 +69,23 @@ class TargetTable:
         {'location': 7, 'name': 'alternative_name', 'val': {'FuncCall': {'funcname': [{'String': {'str': 'min'}}], 'args': [{'ColumnRef': {'fields': [{'String': {'str': 'an'}}, {'String': {'str': 'name'}}], 'location': 11}}], 'location': 7}}}
         """
         self.target = target
+
     #         print(self.target)
 
-    def getValue(self,):
+    def getValue(self, ):
         columnRef = self.target["val"]["FuncCall"]["args"][0]["ColumnRef"]["fields"]
-        return columnRef[0]["String"]["str"]+"."+columnRef[1]["String"]["str"]
+        return columnRef[0]["String"]["str"] + "." + columnRef[1]["String"]["str"]
 
-    def __str__(self,):
+    def __str__(self, ):
         try:
-            return self.target["val"]["FuncCall"]["funcname"][0]["String"]["str"]+"(" + self.getValue() + ")" + " AS " + self.target['name']
+            return self.target["val"]["FuncCall"]["funcname"][0]["String"][
+                "str"] + "(" + self.getValue() + ")" + " AS " + self.target['name']
         except:
             if "FuncCall" in self.target["val"]:
                 return "count(*)"
             else:
                 return "*"
+
 
 class FromTable:
     def __init__(self, from_table):
@@ -85,17 +94,17 @@ class FromTable:
         """
         self.from_table = from_table
         if not 'alias' in self.from_table:
-            self.from_table['alias']={'Alias': {'aliasname':from_table['relname'] }}
+            self.from_table['alias'] = {'Alias': {'aliasname': from_table['relname']}}
 
-    def getFullName(self,):
+    def getFullName(self, ):
         return self.from_table["relname"]
 
-    def getAliasName(self,):
+    def getAliasName(self, ):
         return self.from_table["alias"]["Alias"]["aliasname"]
 
-    def __str__(self,):
+    def __str__(self, ):
         try:
-            return self.getFullName()+" AS "+self.getAliasName()
+            return self.getFullName() + " AS " + self.getAliasName()
         except:
             print(self.from_table)
             raise
@@ -110,7 +119,7 @@ class Comparison:
             self.column = str(self.lexpr)
             self.kind = comparison["A_Expr"]["kind"]
             if not "A_Expr" in comparison["A_Expr"]["rexpr"]:
-                self.rexpr = Expr(comparison["A_Expr"]["rexpr"],self.kind)
+                self.rexpr = Expr(comparison["A_Expr"]["rexpr"], self.kind)
             else:
                 self.rexpr = Comparison(comparison["A_Expr"]["rexpr"])
 
@@ -150,21 +159,23 @@ class Comparison:
                     self.column_list.append(comp.lexpr.getColumnName())
                     break
             self.comp_kind = 2
-    def isCol(self,):
+
+    def isCol(self, ):
         return False
-    def __str__(self,):
+
+    def __str__(self, ):
 
         if self.comp_kind == 0:
             Op = ""
             if self.kind == 0:
                 Op = self.comparison["A_Expr"]["name"][0]["String"]["str"]
             elif self.kind == 7:
-                if self.comparison["A_Expr"]["name"][0]["String"]["str"]=="!~~":
+                if self.comparison["A_Expr"]["name"][0]["String"]["str"] == "!~~":
                     Op = "not like"
                 else:
                     Op = "like"
             elif self.kind == 8:
-                if self.comparison["A_Expr"]["name"][0]["String"]["str"]=="~~*":
+                if self.comparison["A_Expr"]["name"][0]["String"]["str"] == "~~*":
                     Op = "ilike"
                 else:
                     raise
@@ -176,17 +187,17 @@ class Comparison:
                 import json
                 print(json.dumps(self.comparison, sort_keys=True, indent=4))
                 raise "Operation ERROR"
-            return str(self.lexpr)+" "+Op+" "+str(self.rexpr)
+            return str(self.lexpr) + " " + Op + " " + str(self.rexpr)
         elif self.comp_kind == 1:
             if self.kind == 1:
-                return str(self.lexpr)+" IS NOT NULL"
+                return str(self.lexpr) + " IS NOT NULL"
             else:
-                return str(self.lexpr)+" IS NULL"
+                return str(self.lexpr) + " IS NULL"
         else:
             res = ""
             for comp in self.comp_list:
                 if res == "":
-                    res += "( "+str(comp)
+                    res += "( " + str(comp)
                 else:
                     if self.kind == 1:
                         res += " OR "
@@ -196,6 +207,7 @@ class Comparison:
             res += ")"
             return res
 
+
 class Table:
     def __init__(self, table_tree):
         self.name = table_tree["relation"]["RangeVar"]["relname"]
@@ -204,10 +216,11 @@ class Table:
         self.column2type = {}
         for idx, columndef in enumerate(table_tree["tableElts"]):
             self.column2idx[columndef["ColumnDef"]["colname"]] = idx
-            self.column2type[columndef["ColumnDef"]["colname"]] = columndef["ColumnDef"]["typeName"]['TypeName']['names'][-1]['String']['str']
+            self.column2type[columndef["ColumnDef"]["colname"]] = \
+                columndef["ColumnDef"]["typeName"]['TypeName']['names'][-1]['String']['str']
             # print(columndef["ColumnDef"]["typeName"]['TypeName']['names'],self.column2type[columndef["ColumnDef"]["colname"]],self.column2type[columndef["ColumnDef"]["colname"]] in ['int4','text','varchar'])
-            assert self.column2type[columndef["ColumnDef"]["colname"]] in ['int4','text','varchar']
-            if self.column2type[columndef["ColumnDef"]["colname"]] =='int4':
+            assert self.column2type[columndef["ColumnDef"]["colname"]] in ['int4', 'text', 'varchar']
+            if self.column2type[columndef["ColumnDef"]["colname"]] == 'int4':
                 self.column2type[columndef["ColumnDef"]["colname"]] = 'int'
             else:
                 self.column2type[columndef["ColumnDef"]["colname"]] = 'str'
@@ -218,7 +231,7 @@ class Table:
 
 
 class DB:
-    def __init__(self, schema,TREE_NUM_IN_NET=40):
+    def __init__(self, schema, TREE_NUM_IN_NET=40):
         from psqlparse import parse_dict
         parse_tree = parse_dict(schema)
 
@@ -240,18 +253,18 @@ class DB:
             self.columns_total += len(table.idx2column)
 
         self.size = len(self.table_names)
-    def is_str(self,table,column):
+
+    def is_str(self, table, column):
         table = self.name2table[table]
-        return table.column2type[column]=='str'
-        
-    def __len__(self,):
+        return table.column2type[column] == 'str'
+
+    def __len__(self, ):
         if self.size == 0:
             self.size = len(self.table_names)
         return self.size
 
-    def oneHotAll(self,):
+    def oneHotAll(self, ):
         return np.zeros((1, self.size))
 
-    def network_size(self,):
-        return self.TREE_NUM_IN_NET*self.size
-
+    def network_size(self, ):
+        return self.TREE_NUM_IN_NET * self.size
