@@ -216,7 +216,7 @@ class TreeBuilder:
 
         #     raise TreeBuilderError("Could not find relation name for bitmap index scan")
         print(node)
-        raise TreeBuilderError(f"Cannot extract Alias type from node{node}")
+        raise TreeBuilderError(f"Cannot extract Alias type from node: {node}")
 
     def __featurize_join(self, node):
         assert is_join(node)

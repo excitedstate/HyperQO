@@ -40,7 +40,7 @@ class Config:
         self.U_factor = 0.0
         self.log_file = 'log_c3_h64_s4_t3.txt'
         self.latency_file = 'latency_record.txt'
-        self.queries_file = 'workload/JOB_static.json'
+        self.queries_file = '../../data/workload/JOB_static.json'
         self.id2aliasname = {0: 'start', 1: 'chn', 2: 'ci', 3: 'cn', 4: 'ct', 5: 'mc', 6: 'rt', 7: 't', 8: 'k', 9: 'lt',
                              10: 'mk', 11: 'ml', 12: 'it1', 13: 'it2', 14: 'mi', 15: 'mi_idx', 16: 'it', 17: 'kt',
                              18: 'miidx', 19: 'at', 20: 'an', 21: 'n', 22: 'cc', 23: 'cct1', 24: 'cct2', 25: 'it3',
