@@ -21,3 +21,14 @@
 
 1. 先处理简单的, 即关于和PG连接的部分, redefined in [basic.py](src/basic.py)
 2. 文件分类完成, 明天开始精读并测试
+
+## NOTE: BING 2023/5/18 下午4:04 发现
+
+1. KNN是比较简单的, 加了点注释
+2. `torchfold`是第三个第三方库, 不知道放在源码里是为了什么, 可能是因为调试吧，作者对源码做了以下修改
+
+```python3
+isinstance(arg, (torch._C._TensorBase, Variable))
+## -> 
+isinstance(arg, (torch.tensor._TensorBase, Variable)) 
+```

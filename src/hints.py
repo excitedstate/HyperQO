@@ -1,7 +1,12 @@
+import time
+
+import torch
 import src.config as config
 from src.basic import PostgresDB
-import torch
+from src.encoding import SQLEncoder
+
 from src.knn import KNN
+import torchfold
 
 
 def formatFloat(t):
@@ -13,8 +18,7 @@ def formatFloat(t):
 
 class Timer:
     def __init__(self, ):
-        from time import time
-        self.timer = time
+        self.timer = time.time
         self.startTime = {}
 
     def reset(self, s):
@@ -28,7 +32,7 @@ timer = Timer()
 
 
 class Hinter:
-    def __init__(self, model, sql2vec, value_extractor, mcts_searcher=None):
+    def __init__(self, model, sql2vec: SQLEncoder, value_extractor, mcts_searcher=None):
         self.model = model  # Net.TreeNet
         self.sql2vec = sql2vec  #
         self.value_extractor = value_extractor
@@ -53,7 +57,7 @@ class Hinter:
         id_joins_with_predicate = [(self.sql2vec.aliasname2id[p[0]], self.sql2vec.aliasname2id[p[1]]) for p in
                                    self.sql2vec.join_list_with_predicate]
         id_joins = [(self.sql2vec.aliasname2id[p[0]], self.sql2vec.aliasname2id[p[1]]) for p in self.sql2vec.join_list]
-        leading_length = config.leading_length
+        leading_length = config.LEADING_LENGTH
         if leading_length == -1:
             leading_length = len(alias)
         if leading_length > len(alias):
@@ -76,22 +80,22 @@ class Hinter:
         timer.reset('MHPE_time_list')
         plan_times = self.predictWithUncertaintyBatch(plan_jsons=plan_jsons, sql_vec=sql_vec)
         self.MHPE_time_list.append(timer.record('MHPE_time_list'))
-        chosen_leading_pair = sorted(zip(plan_times[:config.max_hint_num], leading_list, leadings_utility_list),
-                                     key=lambda x: x[0][0] + self.knn.kNeightboursSample(x[0]))[0]
+        chosen_leading_pair = sorted(zip(plan_times[:config.MAX_HINT_COUNT], leading_list, leadings_utility_list),
+                                     key=lambda x: x[0][0] + self.knn.k_neighbours_sample(x[0]))[0]
         return chosen_leading_pair
 
     def hinterRun(self, sql):
         self.hinter_times += 1
         plan_json_PG = self.db.get_cost_plan(sql)
         self.samples_plan_with_time = []
-        mask = (torch.rand(1, config.head_num, device=config.device) < 0.9).long()
+        mask = (torch.rand(1, config.NET_HEAD_NUM, device=config.DEVICE_NAME) < 0.9).long()
 
-        if config.cost_test_for_debug:
+        if config.COST_TEST_FOR_DEBUG:
             self.pg_runningtime_list.append(self.db.get_cost(sql)[0])
             self.pg_planningtime_list.append(self.db.get_cost_plan(sql)['Planning Time'])
         else:
-            self.pg_runningtime_list.append(self.db.exec_analyse_plan(sql)['Plan']['Actual Total Time'])
-            self.pg_planningtime_list.append(self.db.exec_analyse_plan(sql)['Planning Time'])
+            self.pg_runningtime_list.append(self.db.get_analyse_plan(sql)['Plan']['Actual Total Time'])
+            self.pg_planningtime_list.append(self.db.get_analyse_plan(sql)['Planning Time'])
 
         sql_vec, alias = self.sql2vec.encoding(sql)
         plan_jsons = [plan_json_PG]
@@ -100,27 +104,26 @@ class Hinter:
         algorithm_idx = 0
 
         chosen_leading_pair = self.findBestHint(plan_json_PG=plan_json_PG, alias=alias, sql_vec=sql_vec, sql=sql)
-        knn_plan = abs(self.knn.kNeightboursSample(plan_times[0]))
+        knn_plan = abs(self.knn.k_neighbours_sample(plan_times[0]))
         if chosen_leading_pair[0][0] < plan_times[algorithm_idx][0] and abs(
-                knn_plan) < config.threshold and self.value_extractor.decode(plan_times[0][0]) > 100:
-            from math import e
-            max_time_out = min(int(self.value_extractor.decode(chosen_leading_pair[0][0]) * 3), config.max_time_out)
-            if config.cost_test_for_debug:
+                knn_plan) < config.THRESHOLD and self.value_extractor.decode(plan_times[0][0]) > 100:
+            max_time_out = min(int(self.value_extractor.decode(chosen_leading_pair[0][0]) * 3), config.MAX_TIME_OUT)
+            if config.COST_TEST_FOR_DEBUG:
                 leading_time_flag = self.db.get_cost(sql=chosen_leading_pair[1] + sql)
                 self.hinter_runtime_list.append(leading_time_flag[0])
                 ##To do: parallel planning
                 self.hinter_planningtime_list.append(
                     self.db.get_cost_plan(sql=chosen_leading_pair[1] + sql)['Planning Time'])
             else:
-                plan_json = self.db.exec_analyse_plan(sql=chosen_leading_pair[1] + sql)
+                plan_json = self.db.get_analyse_plan(sql=chosen_leading_pair[1] + sql)
                 leading_time_flag = (plan_json['Plan']['Actual Total Time'], plan_json['timeout'])
                 self.hinter_runtime_list.append(leading_time_flag[0])
                 ##To do: parallel planning
                 self.hinter_planningtime_list.append(plan_json['Planning Time'])
 
-            self.knn.insertAValue(
+            self.knn.insert_values(
                 (chosen_leading_pair[0], self.value_extractor.encode(leading_time_flag[0]) - chosen_leading_pair[0][0]))
-            if config.cost_test_for_debug:
+            if config.COST_TEST_FOR_DEBUG:
                 self.samples_plan_with_time.append(
                     [self.db.get_cost_plan(sql=chosen_leading_pair[1] + sql, timeout=max_time_out),
                      leading_time_flag[0], mask])
@@ -129,11 +132,11 @@ class Hinter:
                     [self.db.get_cost_plan(sql=chosen_leading_pair[1] + sql, timeout=max_time_out),
                      leading_time_flag[0], mask])
             if leading_time_flag[1]:
-                if config.cost_test_for_debug:
+                if config.COST_TEST_FOR_DEBUG:
                     pg_time_flag = self.db.get_cost(sql=sql)
                 else:
                     pg_time_flag = self.db.get_latency(sql=sql, timeout=300 * 1000)
-                self.knn.insertAValue((plan_times[0], self.value_extractor.encode(pg_time_flag[0]) - plan_times[0][0]))
+                self.knn.insert_values((plan_times[0], self.value_extractor.encode(pg_time_flag[0]) - plan_times[0][0]))
                 if self.samples_plan_with_time[0][1] > pg_time_flag[0] * 1.8:
                     self.samples_plan_with_time[0][1] = pg_time_flag[0] * 1.8
                     self.samples_plan_with_time.append([plan_json_PG, pg_time_flag[0], mask])
@@ -146,7 +149,7 @@ class Hinter:
                 self.hinter_time_list.append([leading_time_flag[0]])
                 self.chosen_plan.append([chosen_leading_pair[1]])
         else:
-            if config.cost_test_for_debug:
+            if config.COST_TEST_FOR_DEBUG:
                 pg_time_flag = self.db.get_cost(sql=sql)
                 self.hinter_runtime_list.append(pg_time_flag[0])
                 ##To do: parallel planning
@@ -156,8 +159,8 @@ class Hinter:
                 self.hinter_runtime_list.append(pg_time_flag[0])
                 ##To do: parallel planning
 
-                self.hinter_planningtime_list.append(self.db.exec_analyse_plan(sql=sql)['Planning Time'])
-            self.knn.insertAValue((plan_times[0], self.value_extractor.encode(pg_time_flag[0]) - plan_times[0][0]))
+                self.hinter_planningtime_list.append(self.db.get_analyse_plan(sql=sql)['Planning Time'])
+            self.knn.insert_values((plan_times[0], self.value_extractor.encode(pg_time_flag[0]) - plan_times[0][0]))
             self.samples_plan_with_time.append([plan_json_PG, pg_time_flag[0], mask])
             self.hinter_time_list.append([pg_time_flag[0]])
             self.chosen_plan.append(['PG'])
@@ -192,7 +195,6 @@ class Hinter:
 
     def predictWithUncertaintyBatch(self, plan_jsons, sql_vec):
         sql_feature = self.model.value_network.sql_feature(sql_vec)
-        import torchfold
         fold = torchfold.Fold(cuda=True)
         res = []
         multi_list = []
@@ -201,8 +203,8 @@ class Hinter:
             multi_value = self.model.plan_to_value_fold(tree_feature=tree_feature, sql_feature=sql_feature, fold=fold)
             multi_list.append(multi_value)
         multi_value = fold.apply(self.model.value_network, [multi_list])[0]
-        mean, variance = self.model.mean_and_variance(multi_value=multi_value[:, :config.head_num])
-        v2 = torch.exp(multi_value[:, config.head_num] * config.var_weight).data.reshape(-1)
+        mean, variance = self.model.mean_and_variance(multi_value=multi_value[:, :config.NET_HEAD_NUM])
+        v2 = torch.exp(multi_value[:, config.NET_HEAD_NUM] * config.VAR_WEIGHT).data.reshape(-1)
         if isinstance(mean, float):
             mean_item = [mean]
         else:

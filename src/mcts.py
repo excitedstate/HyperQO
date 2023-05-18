@@ -1,18 +1,22 @@
-from __future__ import division
 import math
 import random
-from copy import copy
+import time
 import numpy as np
+import torch.nn.functional as F
+import torch.optim as optim
+import torch
+from copy import copy  # # may not work well
+from collections import namedtuple
+
 import src.config as config
+from src.net import ValueNet
+from torch.nn import init
 
 # from models import ValueNet
 # model_path = './saved_models/supervised.pt'
-from src.net import ValueNet
 
-predictionNet = ValueNet(config.mcts_input_size).to(config.cpudevice)
+predictionNet = ValueNet(config.MCTS_INPUT_SIZE).to(config.CPU_DEVICE_NAME)
 for name, param in predictionNet.named_parameters():
-    from torch.nn import init
-
     # print(name,param.shape)
     if len(param.shape) == 2:
         init.xavier_normal(param)
@@ -21,9 +25,7 @@ for name, param in predictionNet.named_parameters():
 # predictionNet = ValueNet(856, 5)
 # predictionNet.load_state_dict(torch.load(model_path, map_location=lambda storage, loc: storage))
 # predictionNet.eval()
-import torch.nn.functional as F
-import torch.optim as optim
-import torch
+
 
 optimizer = optim.Adam(predictionNet.parameters(), lr=3e-4, betas=(0.9, 0.999))
 # optimizer = optim.SGD(predictionNet.parameters(),lr = 3e-5 )
@@ -40,7 +42,7 @@ def getValue(inputState1, inputState2):
 def getReward(state):
     inputState1 = state.inputState1
     # inputState1 = torch.tensor(state.queryEncode, dtype=torch.float32).to(config.cpudevice)
-    inputState2 = torch.tensor(state.order_list, dtype=torch.long).to(config.cpudevice)
+    inputState2 = torch.tensor(state.order_list, dtype=torch.long).to(config.CPU_DEVICE_NAME)
     startTime = time.time()
     with torch.no_grad():
         predictionRuntime = predictionNet(inputState1, inputState2)
@@ -49,22 +51,18 @@ def getReward(state):
     return prediction, time.time() - startTime
 
 
-from math import log
-
-
 def flog(x):
-    return int((log((x + config.offset) / config.max_time_out) / log(config.mcts_v))) / int(
-        (log(config.offset / config.max_time_out) / log(config.mcts_v)))
+    return int((math.log((x + config.OFFSET) / config.MAX_TIME_OUT) / math.log(config.MCTS_V))) / int(
+        (math.log(config.OFFSET / config.MAX_TIME_OUT) / math.log(config.MCTS_V)))
 
 
 def eflog(x):
-    x = x * int((log(config.offset / config.max_time_out) / log(config.mcts_v))) * log(config.mcts_v)
-    from math import e
-    return e ** x * config.max_time_out
+    x = x * int((math.log(config.OFFSET / config.MAX_TIME_OUT) / math.log(config.MCTS_V))) * math.log(config.MCTS_V)
+
+    return math.e ** x * config.MAX_TIME_OUT
 
 
 def randomPolicy(node):
-    import time
     t1 = 0
     while not node.isTerminal:
         # print(node.state.currentStep)
@@ -91,7 +89,6 @@ def randomPolicy(node):
 
 getPossibleActionsTime = 0
 takeActionTime = 0
-import time
 
 
 class planState:
@@ -106,11 +103,11 @@ class planState:
             nodes ([type]): [description]
         """
         self.tableNumber = totalNumberOfTables
-        self.inputState1 = torch.tensor(queryEncode, dtype=torch.float32).to(config.cpudevice)
+        self.inputState1 = torch.tensor(queryEncode, dtype=torch.float32).to(config.CPU_DEVICE_NAME)
         self.currentStep = 0
         self.numberOfTables = numberOfTables
         self.queryEncode = queryEncode
-        self.order_list = np.zeros(config.max_hint_num, dtype=np.int)
+        self.order_list = np.zeros(config.MAX_HINT_COUNT, dtype=np.int)
         self.joins = []
         self.joins_with_predicate = []
         # print("all_joins",len(all_joins))
@@ -209,8 +206,6 @@ class treeNode():
         self.children = {}
 
 
-from collections import namedtuple
-
 MCTSSample = namedtuple('MCTSSample',
                         ('sql_feature', 'order_feature', 'label'))
 
@@ -232,7 +227,6 @@ class MCTSMemory(object):
 
     def sample(self, batch_size):
         if len(self.memory) > batch_size:
-            import random
             return random.sample(self.memory, batch_size)
         else:
             return self.memory
@@ -337,7 +331,7 @@ class MCTSHinterSearch():
         self.memory = MCTSMemory(m_size)
         self.Utility = []
         self.total_cnt = 0
-        self.modelhead = config.log_file.split("/")[-1].split(".txt")[0]
+        self.modelhead = config.LOG_FILE_NAME.split("/")[-1].split(".txt")[0]
 
     def dfs(self, node, depth):
         if (node.state.currentStep == depth):
@@ -363,7 +357,7 @@ class MCTSHinterSearch():
         initialState = planState(totalNumberOfTables, numberOfTables, queryEncode,
                                  all_joins, joins_with_predicate, nodes)
 
-        searchFactor = config.searchFactor
+        searchFactor = config.SEARCH_SIZE
         currentState = initialState
         # print(len(currentState.getPossibleActions()))
         self.mct = mcts(iterationLimit=(int)(len(currentState.getPossibleActions()) * searchFactor))
@@ -378,7 +372,7 @@ class MCTSHinterSearch():
         self.getPossibleActionsTime = getPossibleActionsTime
         global takeActionTime  # debug
         self.takeActionTime = takeActionTime
-        return benefit_top_hints[:config.try_hint_num]
+        return benefit_top_hints[:config.HINT_TRY_TIMES]
 
     def loss(self, input, target, optimize=True):
         # print(input,target)
@@ -413,20 +407,19 @@ class MCTSHinterSearch():
             return recursive(tree_feature=tree_feature)
 
         tree_alias = plan_to_count(tree_feature)
-        import json
         if len(tree_alias) != len(alias_set):
             return
         if tree_alias[0] > tree_alias[1]:
             tmp = tree_alias[0]
             tree_alias[0] = tree_alias[1]
             tree_alias[1] = tmp
-        tree_alias = tree_alias + [0] * (config.max_hint_num - len(tree_alias))
-        inputState1 = torch.tensor(sql_vec, dtype=torch.float32).to(config.cpudevice)
-        inputState2 = torch.tensor(tree_alias, dtype=torch.long).to(config.cpudevice)
+        tree_alias = tree_alias + [0] * (config.MAX_HINT_COUNT - len(tree_alias))
+        inputState1 = torch.tensor(sql_vec, dtype=torch.float32).to(config.CPU_DEVICE_NAME)
+        inputState2 = torch.tensor(tree_alias, dtype=torch.long).to(config.CPU_DEVICE_NAME)
         predictionRuntime = predictionNet(inputState1, inputState2)
-        if target_value > config.max_time_out:
-            target_value = config.max_time_out
-        label = torch.tensor([(flog(target_value)) * 10], device=config.cpudevice, dtype=torch.float32)
+        if target_value > config.MAX_TIME_OUT:
+            target_value = config.MAX_TIME_OUT
+        label = torch.tensor([(flog(target_value)) * 10], device=config.CPU_DEVICE_NAME, dtype=torch.float32)
         # print('label',label)
         loss_value = self.loss(input=predictionRuntime, target=label, optimize=True)
 
@@ -435,7 +428,7 @@ class MCTSHinterSearch():
         return loss_value
 
     def optimize(self):
-        samples = self.memory.sample(config.batch_size)
+        samples = self.memory.sample(config.NET_BATCH_SIZE)
         sql_features = []
         order_features = []
         labels = []
@@ -445,8 +438,8 @@ class MCTSHinterSearch():
             sql_features.append(one_sample.sql_feature)
             order_features.append(one_sample.order_feature)
             labels.append(one_sample.label)
-        sql_feature = torch.stack(sql_features).to(config.cpudevice)
-        order_feature = torch.stack(order_features).to(config.cpudevice)
+        sql_feature = torch.stack(sql_features).to(config.CPU_DEVICE_NAME)
+        order_feature = torch.stack(order_features).to(config.CPU_DEVICE_NAME)
         label = torch.stack(labels, dim=0).reshape(-1, 1)
         predictionRuntime = predictionNet(sql_feature, order_feature)
         loss_value = self.loss(input=predictionRuntime, target=label, optimize=True)

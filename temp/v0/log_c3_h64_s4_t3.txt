@@ -1,3 +1,0 @@
-20000
----- 0 -----
-{'Node Type': 'Bitmap Index Scan', 'Parent Relationship': 'Outer', 'Parallel Aware': False, 'Index Name': 'title_idx_episode_nr', 'Startup Cost': 0.0, 'Total Cost': 6948.85, 'Plan Rows': 546042, 'Plan Width': 0, 'Index Cond': '((episode_nr >= 8) AND (episode_nr <= 18))'}

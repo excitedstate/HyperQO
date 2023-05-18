@@ -1,0 +1,1707 @@
+[
+    {
+        "SelectStmt": {
+            "targetList": [
+                {
+                    "ResTarget": {
+                        "name": "voiced_char_name",
+                        "val": {
+                            "FuncCall": {
+                                "funcname": [
+                                    {
+                                        "String": {
+                                            "str": "min"
+                                        }
+                                    }
+                                ],
+                                "args": [
+                                    {
+                                        "ColumnRef": {
+                                            "fields": [
+                                                {
+                                                    "String": {
+                                                        "str": "chn"
+                                                    }
+                                                },
+                                                {
+                                                    "String": {
+                                                        "str": "name"
+                                                    }
+                                                }
+                                            ],
+                                            "location": 11
+                                        }
+                                    }
+                                ],
+                                "location": 7
+                            }
+                        },
+                        "location": 7
+                    }
+                },
+                {
+                    "ResTarget": {
+                        "name": "voicing_actress_name",
+                        "val": {
+                            "FuncCall": {
+                                "funcname": [
+                                    {
+                                        "String": {
+                                            "str": "min"
+                                        }
+                                    }
+                                ],
+                                "args": [
+                                    {
+                                        "ColumnRef": {
+                                            "fields": [
+                                                {
+                                                    "String": {
+                                                        "str": "n"
+                                                    }
+                                                },
+                                                {
+                                                    "String": {
+                                                        "str": "name"
+                                                    }
+                                                }
+                                            ],
+                                            "location": 53
+                                        }
+                                    }
+                                ],
+                                "location": 49
+                            }
+                        },
+                        "location": 49
+                    }
+                },
+                {
+                    "ResTarget": {
+                        "name": "kung_fu_panda",
+                        "val": {
+                            "FuncCall": {
+                                "funcname": [
+                                    {
+                                        "String": {
+                                            "str": "min"
+                                        }
+                                    }
+                                ],
+                                "args": [
+                                    {
+                                        "ColumnRef": {
+                                            "fields": [
+                                                {
+                                                    "String": {
+                                                        "str": "t"
+                                                    }
+                                                },
+                                                {
+                                                    "String": {
+                                                        "str": "title"
+                                                    }
+                                                }
+                                            ],
+                                            "location": 97
+                                        }
+                                    }
+                                ],
+                                "location": 93
+                            }
+                        },
+                        "location": 93
+                    }
+                }
+            ],
+            "fromClause": [
+                {
+                    "RangeVar": {
+                        "relname": "aka_name",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "an"
+                            }
+                        },
+                        "location": 128
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "char_name",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "chn"
+                            }
+                        },
+                        "location": 149
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "cast_info",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "ci"
+                            }
+                        },
+                        "location": 172
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "company_name",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "cn"
+                            }
+                        },
+                        "location": 194
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "info_type",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "it"
+                            }
+                        },
+                        "location": 219
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "keyword",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "k"
+                            }
+                        },
+                        "location": 241
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "movie_companies",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "mc"
+                            }
+                        },
+                        "location": 260
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "movie_info",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "mi"
+                            }
+                        },
+                        "location": 288
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "movie_keyword",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "mk"
+                            }
+                        },
+                        "location": 311
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "name",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "n"
+                            }
+                        },
+                        "location": 337
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "role_type",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "rt"
+                            }
+                        },
+                        "location": 353
+                    }
+                },
+                {
+                    "RangeVar": {
+                        "relname": "title",
+                        "inhOpt": 2,
+                        "relpersistence": "p",
+                        "alias": {
+                            "Alias": {
+                                "aliasname": "t"
+                            }
+                        },
+                        "location": 375
+                    }
+                }
+            ],
+            "whereClause": {
+                "BoolExpr": {
+                    "boolop": 0,
+                    "args": [
+                        {
+                            "A_Expr": {
+                                "kind": 6,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "note"
+                                                }
+                                            }
+                                        ],
+                                        "location": 392
+                                    }
+                                },
+                                "rexpr": [
+                                    {
+                                        "A_Const": {
+                                            "val": {
+                                                "String": {
+                                                    "str": "(voice)"
+                                                }
+                                            },
+                                            "location": 404
+                                        }
+                                    },
+                                    {
+                                        "A_Const": {
+                                            "val": {
+                                                "String": {
+                                                    "str": "(voice: Japanese version)"
+                                                }
+                                            },
+                                            "location": 433
+                                        }
+                                    },
+                                    {
+                                        "A_Const": {
+                                            "val": {
+                                                "String": {
+                                                    "str": "(voice) (uncredited)"
+                                                }
+                                            },
+                                            "location": 480
+                                        }
+                                    },
+                                    {
+                                        "A_Const": {
+                                            "val": {
+                                                "String": {
+                                                    "str": "(voice: English version)"
+                                                }
+                                            },
+                                            "location": 522
+                                        }
+                                    }
+                                ],
+                                "location": 400
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "cn"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "country_code"
+                                                }
+                                            }
+                                        ],
+                                        "location": 556
+                                    }
+                                },
+                                "rexpr": {
+                                    "A_Const": {
+                                        "val": {
+                                            "String": {
+                                                "str": "[us]"
+                                            }
+                                        },
+                                        "location": 573
+                                    }
+                                },
+                                "location": 572
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "it"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "info"
+                                                }
+                                            }
+                                        ],
+                                        "location": 586
+                                    }
+                                },
+                                "rexpr": {
+                                    "A_Const": {
+                                        "val": {
+                                            "String": {
+                                                "str": "release dates"
+                                            }
+                                        },
+                                        "location": 596
+                                    }
+                                },
+                                "location": 594
+                            }
+                        },
+                        {
+                            "NullTest": {
+                                "arg": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mi"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "info"
+                                                }
+                                            }
+                                        ],
+                                        "location": 618
+                                    }
+                                },
+                                "nulltesttype": 1,
+                                "location": 626
+                            }
+                        },
+                        {
+                            "BoolExpr": {
+                                "boolop": 1,
+                                "args": [
+                                    {
+                                        "A_Expr": {
+                                            "kind": 7,
+                                            "name": [
+                                                {
+                                                    "String": {
+                                                        "str": "~~"
+                                                    }
+                                                }
+                                            ],
+                                            "lexpr": {
+                                                "ColumnRef": {
+                                                    "fields": [
+                                                        {
+                                                            "String": {
+                                                                "str": "mi"
+                                                            }
+                                                        },
+                                                        {
+                                                            "String": {
+                                                                "str": "info"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "location": 645
+                                                }
+                                            },
+                                            "rexpr": {
+                                                "A_Const": {
+                                                    "val": {
+                                                        "String": {
+                                                            "str": "Japan:%201%"
+                                                        }
+                                                    },
+                                                    "location": 658
+                                                }
+                                            },
+                                            "location": 653
+                                        }
+                                    },
+                                    {
+                                        "A_Expr": {
+                                            "kind": 7,
+                                            "name": [
+                                                {
+                                                    "String": {
+                                                        "str": "~~"
+                                                    }
+                                                }
+                                            ],
+                                            "lexpr": {
+                                                "ColumnRef": {
+                                                    "fields": [
+                                                        {
+                                                            "String": {
+                                                                "str": "mi"
+                                                            }
+                                                        },
+                                                        {
+                                                            "String": {
+                                                                "str": "info"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "location": 682
+                                                }
+                                            },
+                                            "rexpr": {
+                                                "A_Const": {
+                                                    "val": {
+                                                        "String": {
+                                                            "str": "USA:%201%"
+                                                        }
+                                                    },
+                                                    "location": 695
+                                                }
+                                            },
+                                            "location": 690
+                                        }
+                                    }
+                                ],
+                                "location": 679
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "n"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "gender"
+                                                }
+                                            }
+                                        ],
+                                        "location": 714
+                                    }
+                                },
+                                "rexpr": {
+                                    "A_Const": {
+                                        "val": {
+                                            "String": {
+                                                "str": "f"
+                                            }
+                                        },
+                                        "location": 724
+                                    }
+                                },
+                                "location": 723
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 7,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "~~"
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "n"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "name"
+                                                }
+                                            }
+                                        ],
+                                        "location": 734
+                                    }
+                                },
+                                "rexpr": {
+                                    "A_Const": {
+                                        "val": {
+                                            "String": {
+                                                "str": "%An%"
+                                            }
+                                        },
+                                        "location": 746
+                                    }
+                                },
+                                "location": 741
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "rt"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "role"
+                                                }
+                                            }
+                                        ],
+                                        "location": 759
+                                    }
+                                },
+                                "rexpr": {
+                                    "A_Const": {
+                                        "val": {
+                                            "String": {
+                                                "str": "actress"
+                                            }
+                                        },
+                                        "location": 768
+                                    }
+                                },
+                                "location": 767
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "t"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 784
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mi"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 791
+                                    }
+                                },
+                                "location": 789
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "t"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 809
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mc"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 816
+                                    }
+                                },
+                                "location": 814
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "t"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 834
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 841
+                                    }
+                                },
+                                "location": 839
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "t"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 859
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mk"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 866
+                                    }
+                                },
+                                "location": 864
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mc"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 884
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 898
+                                    }
+                                },
+                                "location": 896
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mc"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 916
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mi"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 930
+                                    }
+                                },
+                                "location": 928
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mc"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 948
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mk"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 962
+                                    }
+                                },
+                                "location": 960
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mi"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 980
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 994
+                                    }
+                                },
+                                "location": 992
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mi"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1012
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mk"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1026
+                                    }
+                                },
+                                "location": 1024
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1044
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mk"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "movie_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1058
+                                    }
+                                },
+                                "location": 1056
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "cn"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1076
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mc"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "company_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1084
+                                    }
+                                },
+                                "location": 1082
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "it"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1104
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mi"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "info_type_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1112
+                                    }
+                                },
+                                "location": 1110
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "n"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1134
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "person_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1141
+                                    }
+                                },
+                                "location": 1139
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "rt"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1160
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "role_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1168
+                                    }
+                                },
+                                "location": 1166
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "n"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1185
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "an"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "person_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1192
+                                    }
+                                },
+                                "location": 1190
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "person_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1211
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "an"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "person_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1226
+                                    }
+                                },
+                                "location": 1224
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "chn"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1245
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "ci"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "person_role_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1254
+                                    }
+                                },
+                                "location": 1252
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "k"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1278
+                                    }
+                                },
+                                "rexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "mk"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "keyword_id"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1285
+                                    }
+                                },
+                                "location": 1283
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 7,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "~~"
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "t"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "title"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1305
+                                    }
+                                },
+                                "rexpr": {
+                                    "A_Const": {
+                                        "val": {
+                                            "String": {
+                                                "str": "Kung Fu Panda%"
+                                            }
+                                        },
+                                        "location": 1318
+                                    }
+                                },
+                                "location": 1313
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "cn"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "name"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1341
+                                    }
+                                },
+                                "rexpr": {
+                                    "A_Const": {
+                                        "val": {
+                                            "String": {
+                                                "str": "DreamWorks Home Entertainment"
+                                            }
+                                        },
+                                        "location": 1351
+                                    }
+                                },
+                                "location": 1349
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 6,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": "="
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "k"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "keyword"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1387
+                                    }
+                                },
+                                "rexpr": [
+                                    {
+                                        "A_Const": {
+                                            "val": {
+                                                "String": {
+                                                    "str": "murder"
+                                                }
+                                            },
+                                            "location": 1401
+                                        }
+                                    },
+                                    {
+                                        "A_Const": {
+                                            "val": {
+                                                "String": {
+                                                    "str": "marvel-comics"
+                                                }
+                                            },
+                                            "location": 1411
+                                        }
+                                    },
+                                    {
+                                        "A_Const": {
+                                            "val": {
+                                                "String": {
+                                                    "str": "based-on-novel"
+                                                }
+                                            },
+                                            "location": 1428
+                                        }
+                                    },
+                                    {
+                                        "A_Const": {
+                                            "val": {
+                                                "String": {
+                                                    "str": "soothsayer"
+                                                }
+                                            },
+                                            "location": 1446
+                                        }
+                                    }
+                                ],
+                                "location": 1397
+                            }
+                        },
+                        {
+                            "A_Expr": {
+                                "kind": 0,
+                                "name": [
+                                    {
+                                        "String": {
+                                            "str": ">"
+                                        }
+                                    }
+                                ],
+                                "lexpr": {
+                                    "ColumnRef": {
+                                        "fields": [
+                                            {
+                                                "String": {
+                                                    "str": "t"
+                                                }
+                                            },
+                                            {
+                                                "String": {
+                                                    "str": "production_year"
+                                                }
+                                            }
+                                        ],
+                                        "location": 1464
+                                    }
+                                },
+                                "rexpr": {
+                                    "A_Const": {
+                                        "val": {
+                                            "Integer": {
+                                                "ival": 2009
+                                            }
+                                        },
+                                        "location": 1484
+                                    }
+                                },
+                                "location": 1482
+                            }
+                        }
+                    ],
+                    "location": 552
+                }
+            },
+            "op": 0
+        }
+    }
+]

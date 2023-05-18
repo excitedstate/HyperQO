@@ -14,7 +14,7 @@ from torch.nn import init
 
 
 def train(queries, hinter):
-    sys.stdout = open(config.log_file, "w")
+    sys.stdout = open(config.LOG_FILE_NAME, "w")
     print(len(queries))
     s1 = 0
     s2 = 0
@@ -43,19 +43,27 @@ def train(queries, hinter):
             # print()
             print([actual_plans, actual_time])
             print("%.4f %.4f %.4f %.4f %.4f %.4f %.4f" % (s1, s2, s3, s4, s_pg, s_hinter, s_hinter / s_pg))
-            import json
 
             sys.stdout.flush()
 
 
 def main():
     random.seed(113)
-    queries = load_json(config.queries_file)
+    queries = load_json(config.INPUT_WORKLOAD_NAME)
 
     tree_builder = TreeBuilder()
     sql2vec = SQLEncoder()
-    value_network = SPINN(head_num=config.head_num, input_size=7 + 2, hidden_size=config.hidden_size, table_num=50,
-                          sql_size=40 * 40 + config.max_column).to(config.device)
+    """
+        NOTE: BING 2023/5/18 下午4:27 
+        head_num: int
+        input_size: int
+        hidden_size: int
+        table_num: int
+        sql_size: int
+    """
+    value_network = SPINN(head_num=config.NET_HEAD_NUM, input_size=7 + 2, hidden_size=config.NET_HIDDEN_SIZE,
+                          table_num=50,
+                          sql_size=40 * 40 + config.MAX_COLUMN_ID).to(config.DEVICE_NAME)
     for name, param in value_network.named_parameters():
         if len(param.shape) == 2:
             init.xavier_normal(param)
