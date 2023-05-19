@@ -128,12 +128,19 @@ class SPINN(nn.Module):
 
         self.head_layer = nn.Sequential(nn.Linear(hidden_size * 2, hidden_size),
                                         nn.ReLU(),
-                                        nn.Linear(hidden_size, head_num + 1),
-                                        )
+                                        nn.Linear(hidden_size, head_num + 1))
         self.table_embeddings = nn.Embedding(table_num, hidden_size)  # 2 * max_column_in_table * size
         # # not used, the heads will not be used
         self.heads = nn.ModuleList([Head(self.hidden_size) for _ in range(self.head_num + 1)])
         self.relu = nn.ReLU()
+        self.init()
+
+    def init(self):
+        for name, param in self.named_parameters():
+            if len(param.shape) == 2:
+                nn.init.xavier_normal(param)
+            else:
+                nn.init.uniform(param)
 
     def leaf(self, alias_id):
         """

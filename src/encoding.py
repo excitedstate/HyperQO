@@ -257,7 +257,7 @@ class SQLEncoder:
         self.__join_list_with_predicate = set()
         self.__join_list = set()
 
-    def encoding(self, sql: str, debug_dict=None) -> (numpy.ndarray, set):
+    def encode(self, sql: str, debug_dict=None) -> (numpy.ndarray, set):
         """
 
         @param debug_dict:
@@ -351,46 +351,24 @@ class SQLEncoder:
 
 class ValueExtractor:
     def __init__(self, offset=config.OFFSET, max_value=20):
+        """
+            就目前来看, 这个类的作用是将时间转换为一个0-1之间的值
+        @param offset:
+        @param max_value:
+        """
         self.offset = offset
         self.max_value = max_value
 
-    @staticmethod
-    def encode(v):
-        return int(np.log(2 + v) / np.log(config.MAX_TIME_OUT) * 200) / 200.
-        # return int(np.log(self.offset + v) / np.log(config.max_time_out) * 200) / 200.
+    def encode(self, v: float) -> float:
+        # return int(np.log(2 + v) / np.log(config.MAX_TIME_OUT) * 200) / 200.
+        return int(np.log(self.offset + v) / np.log(config.MAX_TIME_OUT) * 200) / 200.
 
-    @staticmethod
-    def decode(v):
-        # v=-(v*v<0)
-        # return np.exp(v/2*np.log(config.max_time_out))#-self.offset
-        return np.exp(v * np.log(config.MAX_TIME_OUT))  # -self.offset
-
-    @staticmethod
-    def cost_encode(v, min_cost, max_cost):
-        return (v - min_cost) / (max_cost - min_cost)
-
-    @staticmethod
-    def cost_decode(v, min_cost, max_cost):
-        return (max_cost - min_cost) * v + min_cost
-
-    @staticmethod
-    def latency_encode(v, min_latency, max_latency):
-        return (v - min_latency) / (max_latency - min_latency)
-
-    @staticmethod
-    def latency_decode(v, min_latency, max_latency):
-        return (max_latency - min_latency) * v + min_latency
-
-    @staticmethod
-    def rows_encode(v, min_cost, max_cost):
-        return (v - min_cost) / (max_cost - min_cost)
-
-    @staticmethod
-    def rows_decode(v, min_cost, max_cost):
-        return (max_cost - min_cost) * v + min_cost
+    def decode(self, v: float) -> float:
+        # return np.exp(v / 2 * np.log(config.MAX_TIME_OUT)) - self.offset
+        return np.exp(v * np.log(config.MAX_TIME_OUT)) - self.offset
 
     def get_plan_stats(self, data):
-        return [self.encode(data["Total Cost"]), self.encode(data["Plan Rows"])]
+        return self.encode(data["Total Cost"]), self.encode(data["Plan Rows"])
 
 
 class TreeBuilder:
@@ -400,96 +378,81 @@ class TreeBuilder:
         self.id2aliasname = config.ID2ALIAS_NAME
         self.aliasname2id = config.ALIAS_NAME2ID
 
-    def __relation_name(self, node):
-        if "Relation Name" in node:
-            return node["Relation Name"]
+    def plan_to_feature_tree(self, plan: dict):
+        """
+            {
+                "Plan": {
+                    "Node Type": "Aggregate",
+                    "Strategy": "Hashed",
+                    ...
+                    "Total Cost": 0.00,
+                    "Plan Rows": 1,
+                    "Plan Width": 8,
+                    "Plans": [
+                        {
+                            "Node Type": "Hash Join",
+                            ...
+                        },
+                        {
+                            "Node Type": "Hash Join",
+                            ...
+                        }
+                    ]
+                    ...
+                }
+            }
+            i assert that: the dict has one key "Plan" and the value of "Plan" is a dict
 
-        if node["Node Type"] == "Bitmap Index Scan":
-            # find the first (longest) relation name that appears in the index name
-            name_key = "Index Name" if "Index Name" in node else "Relation Name"
-            if name_key not in node:
-                print(node)
-                raise TreeBuilderError("Bitmap operator did not have an index name or a relation name")
-            # # ? ? what the fuck
-            for rel in self.__relations:
-                if rel in node[name_key]:
-                    return rel
+            this is a tree structure (left deep), this function convert it to a feature vector
+            and this is a logic query plan, so "Actual Total Time" is not available
+            instead, we use "Total Cost" and "Plan Rows" to represent the time
+        @param plan:
+        @return:
+        """
+        assert "Plan" in plan, "plan should have key 'Plan' and the value of 'Plan' is a dict"
 
-            raise TreeBuilderError("Could not find relation name for bitmap index scan")
+        def _dfp(node: dict):
+            """
+                1. if node has no child, then it is a scan node, return self.__featurize_scan(node)
+                2. if node has 1 child, then it is not a join node, it can be bitmap heap scan, aggregate, etc.
+                    so we search this child
+                3. if node has 2 children, then it is a join node, we search both children
 
-        raise TreeBuilderError("Cannot extract relation type from node")
+                the returned featured vector can be decomposed into a set of features(shape: NET_INPUT_SIZE)
+            @param node:
+            @return:
+            """
 
-    def __alias_name(self, node):
-        if "Alias" in node:
-            return np.asarray([self.aliasname2id[node["Alias"]]])
+            children = node.get('Plans', [])
+            if len(children) == 1:
+                # # 1 child
+                child_value = _dfp(children[0])
 
-        if node["Node Type"] == "Bitmap Index Scan":
-            # find the first (longest) relation name that appears in the index name
-            name_key = "Index Cond"  # if "Index Cond" in node else "Relation Name"
-            if name_key not in node:
-                print(node)
-                raise TreeBuilderError("Bitmap operator did not have an index name or a relation name")
-            for rel in self.aliasname2id:
-                if rel + '.' in node[name_key]:
-                    return np.asarray([-1])
-                    # return np.asarray([self.aliasname2id[rel]])
+                if "Alias" in node and node["Node Type"] == 'Bitmap Heap Scan':
+                    # # bitmap heap scan, and alias can be found
+                    alias_idx_np = np.asarray([self.aliasname2id[node["Alias"]]])
+                    if isinstance(child_value[1], tuple):
+                        raise TreeBuilderError("Node wasn't transparent, a join, or a scan: " + str(node))
+                    return child_value[0], torch.tensor(alias_idx_np, device=config.DEVICE_NAME, dtype=torch.long)
+                return child_value
+            if self.is_join(node):
+                # # 2 children, three elements, .[0] is a tensor, left and left can be anything
+                assert len(children) == 2, "join node should have two children"
 
-        #     raise TreeBuilderError("Could not find relation name for bitmap index scan")
-        print(node)
-        raise TreeBuilderError("Cannot extract Alias type from node")
+                join_feature = self.__featurize_join(node)
+                left = _dfp(children[0])
+                right = _dfp(children[1])
+                return join_feature, left, right
 
-    def __featurize_join(self, node):
-        assert self.is_join(node)
-        # return [node["Node Type"],self.self.value_extractor.get_plan_stats(node),0,0]
-        arr = np.zeros(len(ALL_TYPES))
-        arr[ALL_TYPES.index(node["Node Type"])] = 1
-        feature = np.concatenate((arr, self.value_extractor.get_plan_stats(node)))
-        feature = torch.tensor(feature, device=config.DEVICE_NAME, dtype=torch.float32).reshape(-1,
-                                                                                                config.NET_INPUT_SIZE)
-        return feature
+            if self.is_scan(node):
+                # # 0 child, return scan feature(*features, alias_name encoded by aliasname2id ), 2 tensors
+                assert not children, "scan node should not have children"
+                s = self.__featurize_scan(node)
+                return s
 
-    def __featurize_scan(self, node):
-        assert self.is_scan(node)
-        # return [node["Node Type"],self.self.value_extractor.get_plan_stats(node),self.__alias_name(node)]
-        arr = np.zeros(len(ALL_TYPES))
-        arr[ALL_TYPES.index(node["Node Type"])] = 1
-        feature = np.concatenate((arr, self.value_extractor.get_plan_stats(node)))
-        feature = torch.tensor(feature, device=config.DEVICE_NAME, dtype=torch.float32).reshape(-1,
-                                                                                                config.NET_INPUT_SIZE)
-        return (feature,
-                torch.tensor(self.__alias_name(node), device=config.DEVICE_NAME, dtype=torch.long))
+            raise TreeBuilderError("Node wasn't transparent, a join, or a scan: " + str(node))
 
-    def plan_to_feature_tree(self, plan):
-
-        # children = plan["Plans"] if "Plans" in plan else []
-        if "Plan" in plan:
-            plan = plan["Plan"]
-        children = plan["Plan"] if "Plan" in plan else (plan["Plans"] if "Plans" in plan else [])
-        if len(children) == 1:
-            child_value = self.plan_to_feature_tree(children[0])
-            if "Alias" in plan and plan["Node Type"] == 'Bitmap Heap Scan':
-                alias_idx_np = np.asarray([self.aliasname2id[plan["Alias"]]])
-                if isinstance(child_value[1], tuple):
-                    raise TreeBuilderError("Node wasn't transparent, a join, or a scan: " + str(plan))
-                return child_value[0], torch.tensor(alias_idx_np, device=config.DEVICE_NAME, dtype=torch.long)
-            return child_value
-        # print(plan)
-        if self.is_join(plan):
-            assert len(children) == 2
-            my_vec = self.__featurize_join(plan)
-            left = self.plan_to_feature_tree(children[0])
-            right = self.plan_to_feature_tree(children[1])
-            # print('is_join',my_vec)
-            return my_vec, left, right
-
-        if self.is_scan(plan):
-            assert not children
-            # print(plan)
-            s = self.__featurize_scan(plan)
-            # print('is_scan',s)
-            return s
-
-        raise TreeBuilderError("Node wasn't transparent, a join, or a scan: " + str(plan))
+        return _dfp(plan["Plan"])
 
     @staticmethod
     def is_join(node: dict):
@@ -498,3 +461,70 @@ class TreeBuilder:
     @staticmethod
     def is_scan(node: dict):
         return node["Node Type"] in LEAF_TYPES
+
+    def __alias_name(self, node: dict):
+        """
+            {
+                "Node Type": "Bitmap Index Scan",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Index Name": "comp_cast_type_kind",
+                "Startup Cost": 0.0,
+                "Total Cost": 4.26,
+                "Plan Rows": 14,
+                "Plan Width": 0,
+                "Index Cond": "((kind)::text = \'complete+verified\'::text)"
+            }
+        @param node:
+        @return:
+        """
+        if "Alias" in node:
+            return np.asarray([self.aliasname2id[node["Alias"]]])
+
+        if node["Node Type"] == "Bitmap Index Scan":
+            name_key = "Index Cond"  # if "Index Cond" in node else "Relation Name"
+            if name_key not in node:
+                raise TreeBuilderError("Bitmap operator did not have an index name or a relation name")
+            for rel in self.aliasname2id:
+                if rel + '.' in node[name_key]:
+                    return np.asarray([self.aliasname2id[rel]])
+        # # do not find alias name, return -1
+        return np.asarray([-1])
+        # raise TreeBuilderError("Cannot extract Alias type from node")
+
+    def __featurize_join(self, node: dict):
+        """
+            note:
+                1. mark the type: [0, 0, 0, 1, 0] (e.g)
+                2. encode total cost and plan rows
+                3. feature = cat(type, encode(total cost), encode(plan rows))
+                4. reshape to a set of vectors(size: NET_INPUT_SIZE)
+                5. return *features
+        @param node:
+        @return:
+        """
+        arr = np.zeros(len(ALL_TYPES))
+
+        arr[ALL_TYPES.index(node["Node Type"])] = 1
+        feature = np.concatenate((arr, self.value_extractor.get_plan_stats(node)))
+        return torch.tensor(feature, device=config.DEVICE_NAME, dtype=torch.float32).reshape(-1, config.NET_INPUT_SIZE)
+
+    def __featurize_scan(self, node: dict):
+        """
+            note:
+                1. mark the type: [0, 0, 0, 0, 1]
+                2. encode total cost and plan rows
+                3. feature = cat(type, encode(total cost), encode(plan rows))
+                4. reshape to a set of vectors(size: NET_INPUT_SIZE)
+                5. return (*features, alias_name encoded by aliasname2id )
+        @param node:
+        @return:
+        """
+        arr = np.zeros(len(ALL_TYPES))
+        arr[ALL_TYPES.index(node["Node Type"])] = 1
+
+        feature = np.concatenate((arr, self.value_extractor.get_plan_stats(node)))
+        return (
+            torch.tensor(feature, device=config.DEVICE_NAME, dtype=torch.float32).reshape(-1, config.NET_INPUT_SIZE),
+            torch.tensor(self.__alias_name(node), device=config.DEVICE_NAME, dtype=torch.long)
+        )

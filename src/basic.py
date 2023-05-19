@@ -79,7 +79,7 @@ class PostgresDB:
             self.append_latency_record(sql, plan_ob)
         return plan_ob
 
-    def get_cost_plan(self, sql, timeout=300 * 1000):
+    def get_cost_plan(self, sql: str, timeout: int = 300 * 1000):
         """
             this function looks like get_analyse_plan.
 
