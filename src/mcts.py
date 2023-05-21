@@ -1,4 +1,5 @@
 import math
+import os.path
 import time
 import typing
 
@@ -325,7 +326,6 @@ class MCTSHinterSearch:
         self.memory = MCTSMemory(m_size)
         self.utility = []
         self.total_cnt = 0
-        self.save_model_basic_name = config.LOG_FILE_NAME.split("/")[-1].split(".txt")[0]
 
         self.prediction_net = ValueNet(config.MCTS_INPUT_SIZE).to(config.CPU_DEVICE_NAME)
         # # optimizer and loss function
@@ -334,18 +334,22 @@ class MCTSHinterSearch:
         self.init_prediction_net()
 
     def init_prediction_net(self):
+        path = os.path.join(config.SAVE_MODELS_PATH, "model_checkpoint.pth")
+        if os.path.exists(path):
+            self.prediction_net.load_state_dict(torch.load(path))
+            print("load model from {}".format(path))
         # # init
         for name, param in self.prediction_net.named_parameters():
             if len(param.shape) == 2:
-                nn.init.xavier_normal(param)
+                nn.init.xavier_normal_(param)
             else:
-                nn.init.uniform(param)
+                nn.init.uniform_(param)
 
     def find_candidate_hints(self, number_of_tables, query_encode, all_joins,
                              joins_with_predicate, nodes, depth=2):
         self.total_cnt += 1
         self.utility = list()
-        if self.total_cnt % 200 == 0:
+        if self.total_cnt % 20 == 0:
             self.save_model()
 
         state = PlanState(number_of_tables, query_encode, all_joins, joins_with_predicate, nodes)
@@ -545,11 +549,11 @@ class MCTSHinterSearch:
         """
 
         x = x * int((math.log(config.OFFSET / config.MAX_TIME_OUT) / math.log(config.MCTS_V))) * math.log(config.MCTS_V)
-
-        return math.e ** x * config.MAX_TIME_OUT
+        return numpy.exp(x) * config.MAX_TIME_OUT
 
     def save_model(self):
-        torch.save(self.prediction_net.cpu().state_dict(), 'model/' + self.save_model_basic_name + ".pth")
+        torch.save(self.prediction_net.cpu().state_dict(),
+                   os.path.join(config.SAVE_MODELS_PATH, "model_checkpoint.pth"))
 
-    def load_model(self):
-        self.prediction_net.load_state_dict(torch.load('model/' + self.save_model_basic_name + ".pth"))
+    def load_model(self, model_path: str):
+        self.prediction_net.load_state_dict(torch.load(model_path))

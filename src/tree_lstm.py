@@ -138,9 +138,9 @@ class SPINN(nn.Module):
     def init(self):
         for name, param in self.named_parameters():
             if len(param.shape) == 2:
-                nn.init.xavier_normal(param)
+                nn.init.xavier_normal_(param)
             else:
-                nn.init.uniform(param)
+                nn.init.uniform_(param)
 
     def leaf(self, alias_id):
         """

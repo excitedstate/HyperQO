@@ -187,7 +187,7 @@ class TreeNet:
 
         # # 之前是用math.e**的
         # # 8. 返回loss, mean, variance以及结果
-        return loss_value, mean, variance, torch.exp(multi_value_res.item())
+        return loss_value, mean, variance, np.exp(multi_value[:, config.NET_HEAD_NUM].item())
 
     def optimize(self):
         """
@@ -232,7 +232,7 @@ class TreeNet:
         new_weight = [abs(x - target_values[idx]) * target_values[idx] for idx, x in enumerate(mean_list)]
         self.memory.update_weight(samples_idx, new_weight)
 
-        return loss_value, mean, variance, torch.exp(multi_value[:, :config.NET_HEAD_NUM]).data.reshape(-1)
+        return loss_value, mean, variance, torch.exp(multi_value[:, config.NET_HEAD_NUM]).data.reshape(-1)
 
     @staticmethod
     def plan_to_value_fold(tree_feature, sql_feature, fold):
