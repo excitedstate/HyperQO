@@ -1,0 +1,22 @@
+@startdot
+digraph G{
+    Expr;
+    TargetTable;
+    FromTable;
+    Comparison;
+    SQLEncoder;
+    ValueExtractor;
+    TreeBuilderError[color=green];
+    PredicateEncode[color=red];
+    TreeBuilder;
+    Expr -> Comparison;
+    TargetTable->SQLEncoder;
+    FromTable->SQLEncoder;
+    Comparison->Comparison;
+    Comparison->SQLEncoder;
+    ValueExtractor->TreeBuilder;
+    TreeBuilderError->TreeBuilder;
+    SQLEncoder->main;
+    TreeBuilder->main;
+}
+@enddot

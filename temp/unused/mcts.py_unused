@@ -1,0 +1,10 @@
+def get_value(inputState1, inputState2):
+    with torch.no_grad():
+        predictionRuntime = predictionNet(inputState1, inputState2)
+    prediction = predictionRuntime.detach().cpu().numpy()[0] / 10
+    return prediction
+
+class MCTS:
+    def continue_search(self):
+        for i in range(self.searchLimit):
+            self.execute_round()

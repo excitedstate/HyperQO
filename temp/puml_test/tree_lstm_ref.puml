@@ -1,0 +1,7 @@
+@startdot
+digraph G{
+    TreeLSTM -> SPINN
+    Head -> SPINN
+    SPINN -> main
+}
+@enddot

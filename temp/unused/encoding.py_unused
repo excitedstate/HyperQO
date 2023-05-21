@@ -1,0 +1,148 @@
+class TargetTable:
+    def __init__(self, target):
+        """
+        {
+            'location': 7,
+            'name': 'alternative_name',
+            'val': {'FuncCall': {
+                    'funcname': [{
+                            'String': {'str': 'min'}
+                        }],'args': [{
+                        'ColumnRef': {
+                            'fields': [
+                                {
+                                    'String': {'str': 'an'}
+                                }, {
+                                    'String': {'str': 'name'}
+                                }
+                            ],
+                        'location': 11
+                        }
+                    }],
+                    'location': 7
+                }
+            }
+        }
+        """
+        self.target = target
+
+    #         print(self.target)
+
+    def get_val(self, ):
+        columnRef = self.target["val"]["FuncCall"]["args"][0]["ColumnRef"]["fields"]
+        return columnRef[0]["String"]["str"] + "." + columnRef[1]["String"]["str"]
+
+    def __str__(self, ):
+        try:
+            return self.target["val"]["FuncCall"]["funcname"][0]["String"][
+                "str"] + "(" + self.get_val() + ")" + " AS " + self.target['name']
+        except Exception as e:
+            print(e)
+            if "FuncCall" in self.target["val"]:
+                return "count(*)"
+            else:
+                return "*"
+
+class PredicateEncode:
+    """
+        unused
+    """
+
+    def __init__(self, ):
+        pass
+
+    def stringEncoder(self, string_predicate):
+        return torch.tensor([0, 1] + [0] * config.NET_HIDDEN_SIZE, device=config.DEVICE_NAME).float()
+        pass
+
+    def floatEncoder(self, float1, float2):
+        return torch.tensor([float1, float2] + [0] * config.NET_HIDDEN_SIZE, device=config.DEVICE_NAME).float()
+        pass
+
+class ValueExtractor:
+    @staticmethod
+    def cost_encode(v, min_cost, max_cost):
+        """
+            Min-Max Normalization
+        @param v:
+        @param min_cost:
+        @param max_cost:
+        @return:
+        """
+        return (v - min_cost) / (max_cost - min_cost)
+
+   @staticmethod
+    def cost_decode(v, min_cost, max_cost):
+        """
+            Min-Max Normalization, reverse
+        @param v:
+        @param min_cost:
+        @param max_cost:
+        @return:
+        """
+        return (max_cost - min_cost) * v + min_cost
+
+    @staticmethod
+    def latency_encode(v, min_latency, max_latency):
+        """
+            Min-Max Normalization
+        @param v:
+        @param min_latency:
+        @param max_latency:
+        @return:
+        """
+        return (v - min_latency) / (max_latency - min_latency)
+
+    @staticmethod
+    def latency_decode(v, min_latency, max_latency):
+        """
+            Min-Max Normalization, reverse
+        @param v:
+        @param min_latency:
+        @param max_latency:
+        @return:
+        """
+        return (max_latency - min_latency) * v + min_latency
+
+    @staticmethod
+    def rows_encode(v, min_cost, max_cost):
+        """
+            Min-Max Normalization
+        @param v:
+        @param min_cost:
+        @param max_cost:
+        @return:
+        """
+        return (v - min_cost) / (max_cost - min_cost)
+
+    @staticmethod
+    def rows_decode(v, min_cost, max_cost):
+        """
+            Min-Max Normalization, reverse
+        @param v:
+        @param min_cost:
+        @param max_cost:
+        @return:
+        """
+        return (max_cost - min_cost) * v + min_cost
+
+
+class TreeBuilder:
+    def __relation_name(self, node):
+        if "Relation Name" in node:
+            return node["Relation Name"]
+
+        if node["Node Type"] == "Bitmap Index Scan":
+            # find the first (longest) relation name that appears in the index name
+            name_key = "Index Name" if "Index Name" in node else "Relation Name"
+            if name_key not in node:
+                print(node)
+                raise TreeBuilderError("Bitmap operator did not have an index name or a relation name")
+            # # ? ? what the fuck
+            for rel in self.__relations:
+                if rel in node[name_key]:
+                    return rel
+
+            raise TreeBuilderError("Could not find relation name for bitmap index scan")
+
+        raise TreeBuilderError("Cannot extract relation type from node")

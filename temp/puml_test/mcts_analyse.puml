@@ -1,0 +1,1 @@
+@startdotdigraph Dependency{    ValueNet[color=red];    prediction_net -> get_reward    prediction_net -> MCTSHinterSearch}@enddot

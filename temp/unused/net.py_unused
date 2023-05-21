@@ -1,0 +1,155 @@
+class MCTSReplayMemory(object):
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.memory = []
+        self.position = 0
+
+    def push(self, *args):
+        """Saves a transition."""
+        if len(self.memory) < self.capacity:
+            self.memory.append(None)
+        data = MCTSTransition(*args)
+        position = self.position
+        self.memory[position] = data
+        self.position = (self.position + 1) % self.capacity
+
+    def weight_sample(self, batch_size):
+        weight = []
+        current_weight = 0
+        for x in self.memory:
+            current_weight += x.weight
+            weight.append(current_weight)
+        for idx in range(len(self.memory)):
+            weight[idx] = weight[idx] / current_weight
+        return random.choices(
+            population=list(range(len(self.memory))),
+            weights=weight,
+            k=batch_size
+        )
+
+    def sample(self, batch_size):
+        if len(self.memory) > batch_size:
+            normal_batch = batch_size // 2
+            idx_list1 = []
+            for x in range(normal_batch):
+                idx_list1.append(random.randint(0, normal_batch - 1))
+            idx_list2 = self.weight_sample(batch_size=batch_size - normal_batch)
+            idx_list = idx_list1 + idx_list2
+            res = []
+            for idx in idx_list:
+                res.append(self.memory[idx])
+            return res, idx_list
+        else:
+            return self.memory, list(range(len(self.memory)))
+
+    def updateWeight(self, idx_list, weight_list):
+        for idx, wei in zip(idx_list, weight_list):
+            # print(self.memory[idx].weight,weight_list[idx])
+            self.memory[idx] = self.memory[idx]._replace(weight=wei)
+            # self.memory[idx].weight = weight_list[idx]
+
+    def __len__(self):
+        return len(self.memory)
+
+    def resetMemory(self, ):
+        self.memory = []
+        self.position = 0
+
+
+class TreeNet:
+    def plan_to_value_linear_fold(self, tree_feature, sql_feature, fold):
+        plan_vec = np.zeros((1, config.MAX_ALIAS_ID))
+
+        def recursive(tree_feature, depth=1):
+            if isinstance(tree_feature[1], tuple):
+                feature = tree_feature[0]
+                recursive(tree_feature=tree_feature[1], depth=depth + 1)
+                recursive(tree_feature=tree_feature[2], depth=depth + 1)
+                return
+                # return fold.add('tree_node',h_left,c_left,h_right,c_right,feature)
+            else:
+                plan_vec[0][tree_feature[1].item()] = depth
+                return
+                # return fold.add('tree_node',h_left,c_left,h_right,c_right,feature)
+
+        recursive(tree_feature=tree_feature, depth=1)
+        plan_feature = torch.tensor(plan_vec, device=config.DEVICE_NAME, dtype=torch.float32).reshape(-1,
+                                                                                                      config.MAX_ALIAS_ID)
+        # sql_feature = fold.add('sql_feature',sql_vec)
+        multi_value = fold.add('logits_linear', plan_feature, sql_feature)
+        return multi_value
+
+    def plan_to_value_mlp_fold(self, tree_feature, sql_feature, fold):
+
+        plan_vec = np.zeros((1, config.MAX_ALIAS_ID))
+
+        def recursive(tree_feature, depth=1):
+            if isinstance(tree_feature[1], tuple):
+                feature = tree_feature[0]
+                recursive(tree_feature=tree_feature[1], depth=depth + 1)
+                recursive(tree_feature=tree_feature[2], depth=depth + 1)
+                return
+                # return fold.add('tree_node',h_left,c_left,h_right,c_right,feature)
+            else:
+                plan_vec[0][tree_feature[1].item()] = depth
+                return
+                # return fold.add('tree_node',h_left,c_left,h_right,c_right,feature)
+
+        recursive(tree_feature=tree_feature, depth=1)
+        plan_feature = torch.tensor(plan_vec, device=config.DEVICE_NAME, dtype=torch.float32).reshape(-1,
+                                                                                                      config.MAX_ALIAS_ID)
+        # sql_feature = fold.add('sql_feature',sql_vec)
+        multi_value = fold.add('logits_mlp', plan_feature, sql_feature)
+        return multi_value
+
+    def optimize_mlp(self):
+        fold = torchfold.Fold(cuda=True)
+        samples, samples_idx = self.memory.sample(config.NET_BATCH_SIZE)
+        target_features = []
+        masks = []
+        multi_list = []
+        target_values = []
+        for one_sample in samples:
+            # print(one_sample)
+            multi_value = self.plan_to_value_fold(tree_feature=one_sample.tree_feature,
+                                                  sql_feature=one_sample.sql_feature, fold=fold)
+            masks.append(one_sample.mask)
+            target_features.append(one_sample.target_feature)
+            target_values.append(one_sample.target_feature.mean().item())
+            multi_list.append(multi_value)
+        multi_value = fold.apply(self.value_network, [multi_list])[0]
+        mask = torch.cat(masks, dim=0)
+        target_feature = torch.cat(target_features, dim=0)
+        loss_value = self.loss(multi_value=multi_value[:, :config.NET_HEAD_NUM] * mask, target=target_feature * mask,
+                               optimize=True, var=multi_value[:, config.NET_HEAD_NUM])
+        mean, variance = self.mean_and_variance(multi_value=multi_value[:, :config.NET_HEAD_NUM])
+        mean_list = [mean] if isinstance(mean, float) else [x.item() for x in mean]
+        new_weight = [abs(x - target_values[idx]) * target_values[idx] for idx, x in enumerate(mean_list)]
+        self.memory.update_weight(samples_idx, new_weight)
+        return loss_value, mean, variance, torch.exp(multi_value[:, config.NET_HEAD_NUM]).data.reshape(-1)
+
+    def optimize_linear(self):
+        fold = torchfold.Fold(cuda=True)
+        samples, samples_idx = self.memory.sample(config.NET_BATCH_SIZE)
+        target_features = []
+        masks = []
+        multi_list = []
+        target_values = []
+        for one_sample in samples:
+            # print(one_sample)
+            multi_value = self.plan_to_value_fold(tree_feature=one_sample.tree_feature,
+                                                  sql_feature=one_sample.sql_feature, fold=fold)
+            masks.append(one_sample.mask)
+            target_features.append(one_sample.target_feature)
+            target_values.append(one_sample.target_feature.mean().item())
+            multi_list.append(multi_value)
+        multi_value = fold.apply(self.value_network, [multi_list])[0]
+        mask = torch.cat(masks, dim=0)
+        target_feature = torch.cat(target_features, dim=0)
+        loss_value = self.loss(multi_value=multi_value[:, :config.NET_HEAD_NUM] * mask, target=target_feature * mask,
+                               optimize=True, var=multi_value[:, config.NET_HEAD_NUM])
+        mean, variance = self.mean_and_variance(multi_value=multi_value[:, :config.NET_HEAD_NUM])
+        mean_list = [mean] if isinstance(mean, float) else [x.item() for x in mean]
+        new_weight = [abs(x - target_values[idx]) * target_values[idx] for idx, x in enumerate(mean_list)]
+        self.memory.update_weight(samples_idx, new_weight)
+        return loss_value, mean, variance, torch.exp(multi_value[:, config.NET_HEAD_NUM]).data.reshape(-1)

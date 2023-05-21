@@ -1,0 +1,6 @@
+def formatFloat(t):
+    try:
+        return " ".join(["{:.4f}".format(x) for x in t])
+    except:
+        return " ".join(["{:.4f}".format(x) for x in [t]])
+
