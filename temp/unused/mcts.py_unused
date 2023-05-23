@@ -8,3 +8,9 @@ class MCTS:
     def continue_search(self):
         for i in range(self.searchLimit):
             self.execute_round()
+
+    @staticmethod
+    def get_action(root, best_child):
+        for action, node in root.children.items():
+            if node is best_child:
+                return action

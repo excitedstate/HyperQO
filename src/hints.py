@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import time
 import typing
@@ -44,7 +45,7 @@ class TimerRecord:
                                       'pg_running_time',
                                       'mcts_time',
                                       'hinter_planning_time',
-                                      'MHPE_time',
+                                      'MHPE_time',  # # multi-head-prediction-estimator
                                       'hinter_runtime',
                                       'chosen_plan',
                                       'hinter_time'])
@@ -67,7 +68,13 @@ class TimerRecord:
                                                self.chosen_plan_list[item], self.hinter_time_list[item])
 
 
-class HintGenerator:
+class QueryPlan:
+    def __init__(self, plan_json: dict, leading: typing.Optional[str] = None):
+        self.plan_json = plan_json
+        self.leading = leading
+
+
+class HyperQO:
     def __init__(self, tree_net: TreeNet,
                  sql2vec: SQLEncoder,
                  value_extractor: ValueExtractor,
@@ -81,52 +88,64 @@ class HintGenerator:
 
         self.db = PostgresDB.default()
 
-        self.hinter_count = 0
+        self.invoke_count = 0
         self.timer = Timer()
         self.timer_record = TimerRecord()
 
-    def hinter_run(self, sql: str):
+    def optimize(self, sql: str):
         """
-
+            for each sql query, run the hint generator
         @param sql:
         @return:
         """
-        self.hinter_count += 1
+        self.invoke_count += 1
+
+        # # 这三行是为了调试
+        analyse_plan_res = self.db.get_analyse_plan(sql)
+        self.timer_record.pg_running_time_list.append(analyse_plan_res['Plan']['Actual Total Time'])
+        self.timer_record.pg_planning_time_list.append(analyse_plan_res['Planning Time'])
+
+        # # 1. get the cost-based plan from pg
         plan_json_pg = self.db.get_cost_plan(sql)
 
-        samples_plan_with_time = []
+        # # 2. encode sql and get related table
+        sql_vec, alias = self.sql2vec.encode(sql)
+
+        chosen_leading_pairs = self.find_base_hint(plan_json_pg=plan_json_pg,
+                                                   alias=alias,
+                                                   sql_vec=sql_vec,
+                                                   sql=sql)
+
         mask = (torch.rand(1, config.NET_HEAD_NUM, device=config.DEVICE_NAME) < 0.9).long()
 
-        if config.COST_TEST_FOR_DEBUG:
-            self.timer_record.pg_running_time_list.append(self.db.get_cost(sql)[0])
-            self.timer_record.pg_planning_time_list.append(self.db.get_cost_plan(sql)['Planning Time'])
-        else:
-            self.timer_record.pg_running_time_list.append(self.db.get_analyse_plan(sql)['Plan']['Actual Total Time'])
-            self.timer_record.pg_planning_time_list.append(self.db.get_analyse_plan(sql)['Planning Time'])
+        samples_plan_with_time = self.adaptive(sql_vec, chosen_leading_pairs[0], sql, mask, plan_json_pg)
 
-        sql_vec, alias = self.sql2vec.encode(sql)
-        plan_jsons = [plan_json_pg]
-        plan_times = self.predict_with_uncertainty_batch(plan_jsons=plan_jsons, sql_vec=sql_vec)
+        self.batch_train(samples_plan_with_time, sql_vec, mask, alias)
 
-        # # list[( plan_time, leading, leading_utility )], 0 就是最好的
-        chosen_leading_pair = self.find_base_hint(plan_json_pg=plan_json_pg, alias=alias, sql_vec=sql_vec, sql=sql)
+        return *self.timer_record[-1], chosen_leading_pairs
+
+    def adaptive(self, sql_vec, chosen_leading_pair, sql: str, mask, plan_json_pg):
+        """
+            这个函数是关键
+        @param sql_vec:
+        @param chosen_leading_pair:
+        @param sql:
+        @param mask:
+        @param plan_json_pg:
+        @return:
+        """
+        plan_times = self.predict_with_uncertainty_batch(plan_jsons=[plan_json_pg], sql_vec=sql_vec)
+        samples_plan_with_time = list()
         knn_plan = abs(self.knn.k_neighbours_sample(plan_times[0]))
-
-        if chosen_leading_pair[0][0] < plan_times[0][0] and abs(
-                knn_plan) < config.THRESHOLD and self.value_extractor.decode(plan_times[0][0]) > 100:
-            # # 优化不太行
+        # # 0 0 就是 mean time
+        if chosen_leading_pair[0][0] < plan_times[0][0] and knn_plan < config.THRESHOLD and self.value_extractor.decode(
+                plan_times[0][0]) > 100:
+            # # 最好的 满足 要求,
             max_time_out = min(int(self.value_extractor.decode(chosen_leading_pair[0][0]) * 3), config.MAX_TIME_OUT)
-            if config.COST_TEST_FOR_DEBUG:
-                # # todo: bug here
-                leading_time_flag = self.db.get_cost(sql=chosen_leading_pair[1] + sql)
-                self.timer_record.hinter_runtime_list.append(leading_time_flag[0])
-                self.timer_record.hinter_planning_time_list.append(
-                    self.db.get_cost_plan(sql=chosen_leading_pair[1] + sql)['Planning Time'])
-            else:
-                plan_json = self.db.get_analyse_plan(sql=chosen_leading_pair[1] + sql)
-                leading_time_flag = (plan_json['Plan']['Actual Total Time'], plan_json['timeout'])
-                self.timer_record.hinter_runtime_list.append(leading_time_flag[0])
-                self.timer_record.hinter_planning_time_list.append(plan_json['Planning Time'])
+            plan_json = self.db.get_analyse_plan(sql=chosen_leading_pair[1] + sql)
+            leading_time_flag = (plan_json['Plan']['Actual Total Time'], plan_json['timeout'])
+            self.timer_record.hinter_runtime_list.append(leading_time_flag[0])
+            self.timer_record.hinter_planning_time_list.append(plan_json['Planning Time'])
 
             self.knn.insert_values((chosen_leading_pair[0],
                                     self.value_extractor.encode(leading_time_flag[0]) - chosen_leading_pair[0][0]))
@@ -138,43 +157,40 @@ class HintGenerator:
             ])
 
             if leading_time_flag[1]:
-                if config.COST_TEST_FOR_DEBUG:
-                    pg_time_flag = self.db.get_cost(sql=sql)
+                # # 超时了
+                pg_execute_time = self.db.get_latency(sql=sql, timeout=300 * 1000)
+                self.knn.insert_values(
+                    (plan_times[0], self.value_extractor.encode(pg_execute_time[0]) - plan_times[0][0]))
+                if samples_plan_with_time[0][1] > pg_execute_time[0] * 1.8:
+                    samples_plan_with_time[0][1] = pg_execute_time[0] * 1.8
+                    samples_plan_with_time.append([plan_json_pg, pg_execute_time[0], mask])
                 else:
-                    pg_time_flag = self.db.get_latency(sql=sql, timeout=300 * 1000)
-                self.knn.insert_values((plan_times[0], self.value_extractor.encode(pg_time_flag[0]) - plan_times[0][0]))
-                if samples_plan_with_time[0][1] > pg_time_flag[0] * 1.8:
-                    samples_plan_with_time[0][1] = pg_time_flag[0] * 1.8
-                    samples_plan_with_time.append([plan_json_pg, pg_time_flag[0], mask])
-                else:
-                    samples_plan_with_time[0] = [plan_json_pg, pg_time_flag[0], mask]
-
+                    samples_plan_with_time[0] = [plan_json_pg, pg_execute_time[0], mask]
+                # # 用 PG
                 self.timer_record.hinter_time_list.append(
                     [max_time_out, self.db.get_latency(sql=sql, timeout=300 * 1000)[0]])
                 self.timer_record.chosen_plan_list.append([chosen_leading_pair[1], 'PG'])
             else:
+                # # 用 hint
                 self.timer_record.hinter_time_list.append([leading_time_flag[0]])
                 self.timer_record.chosen_plan_list.append([chosen_leading_pair[1]])
         else:
-            # # 优化可以
-            if config.COST_TEST_FOR_DEBUG:
-                pg_time_flag = self.db.get_cost(sql=sql)
-                self.timer_record.hinter_runtime_list.append(pg_time_flag[0])
-                self.timer_record.hinter_planning_time_list.append(self.db.get_cost_plan(sql)['Planning Time'])
-            else:
-                pg_time_flag = self.db.get_latency(sql=sql, timeout=300 * 1000)
-                self.timer_record.hinter_runtime_list.append(pg_time_flag[0])
+            # # 用pg
+            # # 获取原SQL的执行时间和计划时间
+            pg_execute_time, _ = self.db.get_latency(sql=sql, timeout=300 * 1000)
+            self.timer_record.hinter_runtime_list.append(pg_execute_time)
+            self.timer_record.hinter_planning_time_list.append(self.db.get_analyse_plan(sql=sql)['Planning Time'])
 
-                self.timer_record.hinter_planning_time_list.append(self.db.get_analyse_plan(sql=sql)['Planning Time'])
+            self.knn.insert_values((plan_times[0], self.value_extractor.encode(pg_execute_time) - plan_times[0][0]))
+            samples_plan_with_time.append([plan_json_pg, pg_execute_time, mask])
 
-            self.knn.insert_values((plan_times[0], self.value_extractor.encode(pg_time_flag[0]) - plan_times[0][0]))
-            samples_plan_with_time.append([plan_json_pg, pg_time_flag[0], mask])
-
-            self.timer_record.hinter_time_list.append([pg_time_flag[0]])
+            self.timer_record.hinter_time_list.append([pg_execute_time])
             self.timer_record.chosen_plan_list.append(['PG'])
+        return samples_plan_with_time
 
+    def batch_train(self, samples_plan_with_time, sql_vec, mask, alias):
         for sample in samples_plan_with_time:
-            # # 选出计划, 更新tree_net和mcts_searcher
+            # # 增量训练 tree_net 和 mcts_searcher
             try:
                 target_value = self.value_extractor.encode(sample[1])
                 self.tree_net.train(plan_json=sample[0], sql_vec=sql_vec, target_value=target_value, mask=mask,
@@ -184,28 +200,20 @@ class HintGenerator:
             except Exception as e:
                 logging.error(f"{e=}")
 
-        if self.hinter_count < 1000 or self.hinter_count % 10 == 0:
-            # # 记录loss
-            loss = self.tree_net.optimize()[0]
-            loss1 = self.mcts_searcher.optimize()
-            if self.hinter_count < 1000:
-                loss = self.tree_net.optimize()[0]
-                loss1 = self.mcts_searcher.optimize()
-            if loss > 3:
-                loss = self.tree_net.optimize()[0]
-                loss1 = self.mcts_searcher.optimize()
-            if loss > 3:
-                loss = self.tree_net.optimize()[0]
-                loss1 = self.mcts_searcher.optimize()
-            logging.debug(f"{loss=}, {loss1=}")
-
-        # # 这些指标集记录的时间次数应该是一样的
-        assert len({len(self.timer_record.hinter_runtime_list), len(self.timer_record.pg_running_time_list),
-                    len(self.timer_record.mcts_time_list),
-                    len(self.timer_record.hinter_planning_time_list), len(self.timer_record.mhpe_time_list),
-                    len(self.timer_record.hinter_runtime_list),
-                    len(self.timer_record.chosen_plan_list), len(self.timer_record.hinter_time_list)}) == 1
-        return self.timer_record[-1]
+        if self.invoke_count < 1000 or self.invoke_count % 10 == 0:
+            # # 利用保存的数据训练tree_net和mcts_searcher
+            loss_tree_net = self.tree_net.optimize()[0]
+            loss_mcts_searcher = self.mcts_searcher.optimize()
+            if self.invoke_count < 1000:
+                loss_tree_net = self.tree_net.optimize()[0]
+                loss_mcts_searcher = self.mcts_searcher.optimize()
+            if loss_tree_net > 3:
+                loss_tree_net = self.tree_net.optimize()[0]
+                loss_mcts_searcher = self.mcts_searcher.optimize()
+            if loss_tree_net > 3:
+                loss_tree_net = self.tree_net.optimize()[0]
+                loss_mcts_searcher = self.mcts_searcher.optimize()
+            logging.debug(f"{loss_tree_net=}, {loss_mcts_searcher=}")
 
     def find_base_hint(self, plan_json_pg: dict, alias: set[str], sql_vec: np.ndarray, sql: str):
         """
@@ -217,7 +225,6 @@ class HintGenerator:
         @return:
         """
         # # get ids for alias, joins...
-        alias_id = [self.sql2vec.aliasname2id[a] for a in alias]
         id_joins_with_predicate = [(self.sql2vec.aliasname2id[p[0]], self.sql2vec.aliasname2id[p[1]]) for p in
                                    self.sql2vec.join_list_with_predicate]
         id_joins = [(self.sql2vec.aliasname2id[p[0]], self.sql2vec.aliasname2id[p[1]]) for p in self.sql2vec.join_list]
@@ -232,31 +239,33 @@ class HintGenerator:
         self.timer.reset('mcts_time_list')
         # # find candidate hints
         join_list_with_predicate = self.mcts_searcher.find_candidate_hints(len(alias), sql_vec, id_joins,
-                                                                           id_joins_with_predicate, alias_id,
+                                                                           id_joins_with_predicate,
                                                                            depth=leading_length)
         self.timer_record.mcts_time_list.append(self.timer.record('mcts_time_list'))
 
         leading_list = []
         plan_jsons = []
         leadings_utility_list = []
-        # # ... 获取 leadings
-        for join in join_list_with_predicate:
+        # # ... 获取 hinted sql
+        for leading, utility in join_list_with_predicate:
             leading_list.append(
-                '/*+Leading(' + " ".join([self.sql2vec.id2aliasname[x] for x in join[0][:leading_length]]) + ')*/')
-
-            leadings_utility_list.append(join[1])
-            # # 最好用连接池
+                '/*+Leading(' + " ".join([self.sql2vec.id2aliasname[x] for x in leading[:leading_length]]) + ')*/')
+            leadings_utility_list.append(utility)
             plan_jsons.append(self.db.get_cost_plan(leading_list[-1] + sql))
         # # 最后加入 cost - based plan
         plan_jsons.extend([plan_json_pg])
+        leading_list.append('PG')
+        leadings_utility_list.append(0)
         # # 2. 获取不确定性预测结果
         self.timer.reset('MHPE_time_list')
         plan_times = self.predict_with_uncertainty_batch(plan_jsons=plan_jsons, sql_vec=sql_vec)
         self.timer_record.mhpe_time_list.append(self.timer.record('MHPE_time_list'))
         # # 3. 排序, 选出最好的几个结果 list[( plan_time, leading, leading_utility )]
-        chosen_leading_pair = sorted(zip(plan_times[:config.MAX_HINT_COUNT], leading_list, leadings_utility_list),
-                                     key=lambda x: x[0][0] + self.knn.k_neighbours_sample(x[0]))[0]
-        return chosen_leading_pair
+        # #    x[0][0] = mean_item
+        chosen_leading_pairs = sorted(
+            zip(plan_times[:config.MAX_HINT_COUNT], leading_list, leadings_utility_list, plan_jsons),
+            key=lambda x: x[0][0] + self.knn.k_neighbours_sample(x[0]))
+        return chosen_leading_pairs
 
     def predict_with_uncertainty_batch(self, plan_jsons: list[dict], sql_vec: np.ndarray):
         """
@@ -265,7 +274,7 @@ class HintGenerator:
         @param sql_vec:
         @return:
         """
-        # # to tensors
+        # # to tensor
         sql_feature = self.tree_net.value_network.sql_feature(sql_vec)
 
         fold = torchfold.Fold(cuda=False)
@@ -273,6 +282,7 @@ class HintGenerator:
         for plan_json in plan_jsons:
             try:
                 tree_feature = self.tree_net.tree_builder.plan_to_feature_tree(plan_json)
+                # # 多次运行, 存在不确定性
                 multi_value = self.tree_net.plan_to_value_fold(tree_feature=tree_feature, sql_feature=sql_feature,
                                                                fold=fold)
                 multi_list.append(multi_value)

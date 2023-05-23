@@ -41,7 +41,7 @@ class PostgresDB:
         self.latency_record = dict()
         self._latency_file = self.generate_latency_pool(latency_file_name)
 
-    def get_analyse_plan(self, sql: str, timeout=300 * 1000, with_cache=False):
+    def get_analyse_plan(self, sql: str, timeout=300 * 1000, with_cache=True):
         """
             getAnalysePlanJson
 
@@ -50,9 +50,6 @@ class PostgresDB:
         @param with_cache:
         @return:
         """
-        if config.COST_TEST_FOR_DEBUG:
-            # # I don't know why this is here
-            raise
         if with_cache and sql in self.latency_record:
             return self.latency_record[sql]
 
@@ -129,10 +126,7 @@ class PostgresDB:
         # # return
         return self.latency_record[condition]
 
-    def get_latency_record(self, sql: str, timeout=300 * 1000, with_cache=False):
-        if config.COST_TEST_FOR_DEBUG:
-            # # I don't know why this is here
-            raise
+    def get_latency_record(self, sql: str, timeout=300 * 1000, with_cache=True):
         plan_json = self.get_analyse_plan(sql, timeout, with_cache)
         return plan_json['Plan']['Actual Total Time'], plan_json['timeout']
 

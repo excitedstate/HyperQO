@@ -38,8 +38,6 @@ MCTS_INPUT_SIZE = MAX_ALIAS_ID * MAX_ALIAS_ID + MAX_COLUMN_ID
 SEARCH_SIZE = 4
 U_FACTOR = 0.0
 
-COST_TEST_FOR_DEBUG = False
-
 PROJECT_ROOT = '/home/bing/Projects/PythonProjects/HyperQO/'
 DATA_PATH = os.path.join(PROJECT_ROOT, 'data')
 LOGS_PATH = os.path.join(DATA_PATH, 'logs')

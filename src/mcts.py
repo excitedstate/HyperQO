@@ -16,9 +16,15 @@ from copy import copy
 from collections import namedtuple
 
 
-class ValueNet(nn.Module):
+class JoinOrderEstimator(nn.Module):
     def __init__(self, in_dim, n_words=40, hidden_size=64):
-        super(ValueNet, self).__init__()
+        """
+
+        @param in_dim:
+        @param n_words: 表的数量
+        @param hidden_size:
+        """
+        super(JoinOrderEstimator, self).__init__()
         self.dim = in_dim
         self.layer1 = nn.Sequential(nn.Linear(in_dim, hidden_size), nn.ReLU(True))
         self.output_layer = nn.Sequential(nn.Linear(hidden_size * 2, hidden_size),
@@ -34,24 +40,27 @@ class ValueNet(nn.Module):
                                  nn.ReLU(),
                                  nn.Conv1d(in_channels=self.hs, out_channels=self.hs, kernel_size=5, padding=2),
                                  nn.MaxPool1d(kernel_size=config.MAX_HINT_COUNT))
+        # # cnn 和 LSTM 选一个
         self.lstm = nn.LSTM(input_size=self.hs, hidden_size=self.hs, batch_first=True)
 
-    def forward(self, q_e, j_o):
+    def forward(self, query_encoding, join_order):
         """
             note:
                 permute: 将tensor的维度换位。
-        @param q_e:
-        @param j_o:
+        @param query_encoding: query encoding, SQL查询的编码
+        @param join_order: join order, 表的顺序
         @return:
         """
-        x = self.layer1(q_e).reshape(-1, self.hs)
+        e_q = self.layer1(query_encoding).reshape(-1, self.hs)
 
-        j_o_e = self.table_embeddings(j_o).reshape(-1, config.MAX_HINT_COUNT, self.hs)
+        jo_embedding = self.table_embeddings(join_order).reshape(-1, config.MAX_HINT_COUNT, self.hs)
 
-        h = self.cnn(j_o_e.permute(0, 2, 1))
-        ox = torch.cat((x, h.reshape(-1, self.hs)), dim=1)
-        x = self.output_layer(ox)
-        return x
+        e_o = self.cnn(jo_embedding.permute(0, 2, 1))
+
+        ox = torch.cat((e_q, e_o.reshape(-1, self.hs)), dim=1)
+        # # 叶子节点的可用度, 也就是这个连接顺序的度量
+        b_v = self.output_layer(ox)
+        return b_v
 
 
 class MCTSMemory:
@@ -96,8 +105,7 @@ class PlanState:
                  number_of_tables: int,
                  query_encode: numpy.ndarray,
                  all_joins: typing.Iterable[int],
-                 joins_with_predicate: typing.Iterable[int],
-                 nodes: typing.Iterable[int]):
+                 joins_with_predicate: typing.Iterable[int]):
         # # init search state
         # # order_list records now path
         self.order_list = np.zeros(config.MAX_HINT_COUNT, dtype=np.int32)
@@ -120,7 +128,7 @@ class PlanState:
             获取当前步骤之后还可以添加的表
         @return:
         """
-        startTime = time.time()
+        start_time = time.time()
 
         if len(self.possible_actions) > 0 and self.current_step > 1:
             # # 判断是否已经获取过, 如果已经获取过, 就不必重复获取了
@@ -128,12 +136,10 @@ class PlanState:
 
         possible_actions = set()
         if self.current_step == 1:
-
             for join in self.joins_with_predicate:
                 if join[0] == self.order_list[0]:
                     possible_actions.add(join[1])
         elif self.current_step == 0:
-
             for join in self.joins_with_predicate:
                 possible_actions.add(join[0])
         else:
@@ -147,7 +153,7 @@ class PlanState:
 
         self.possible_actions = possible_actions
 
-        PlanState.TIME4GET_POSSIBLE_ACTIONS += time.time() - startTime
+        PlanState.TIME4GET_POSSIBLE_ACTIONS += time.time() - start_time
         return possible_actions
 
     def take_action(self, action: int):
@@ -261,16 +267,26 @@ class MCTS:
             self.back_propagation(node, reward)
 
     def select_node(self, node: TreeNode):
+        """
+            注意 node.is_terminal == node.is_full_expanded不一定成立, 因为 后者 会在 is_fully_expanded 中被修改
+        @param node:
+        @return:
+        """
         while not node.is_terminal:
             if node.is_fully_expanded:
                 node = self.get_best_child(node, self.exploration_constant)
             else:
+                # # usually this branch will be executed
                 return self.expand(node)
         return node
 
     @staticmethod
     def expand(node: TreeNode):
-        # # 获取可能的扩展
+        """
+            获取所有可能的节点，选择第一个没被扩展的
+        @param node: 
+        @return: 
+        """
         actions = node.state.get_possible_actions()
 
         for action in actions:
@@ -283,12 +299,11 @@ class MCTS:
                 if len(actions) == len(node.children):
                     node.is_fully_expanded = True
                 return new_node
-
+        # # not node.is_terminal and not node.is_fully_expanded, so can not reach here
         raise Exception("Should never reach here")
 
     @staticmethod
     def back_propagation(node: TreeNode, reward: float):
-        # print(reward)
         while node is not None:
             node.num_visits += 1
             node.total_reward += reward
@@ -299,26 +314,21 @@ class MCTS:
         """
             根据公式选择最“好”的节点，之后执行回溯
         @param node:
-        @param exploration_constant:
+        @param exploration_constant: i.e. \gamma
         @return:
         """
-        bestValue = float("-inf")
-        bestNodes = []
+        best_value = float("-inf")
+        best_nodes = []
         for child in node.children.values():
-            nodeValue = child.total_reward / child.num_visits + exploration_constant * math.sqrt(
+            # # calculate the utility of the node
+            node_value = child.total_reward / child.num_visits + exploration_constant * math.sqrt(
                 2 * math.log(node.num_visits) / child.num_visits)
-            if nodeValue > bestValue:
-                bestValue = nodeValue
-                bestNodes = [child]
-            elif nodeValue == bestValue:
-                bestNodes.append(child)
-        return random.choice(bestNodes)
-
-    @staticmethod
-    def get_action(root, best_child):
-        for action, node in root.children.items():
-            if node is best_child:
-                return action
+            if node_value > best_value:
+                best_value = node_value
+                best_nodes = [child]
+            elif node_value == best_value:
+                best_nodes.append(child)
+        return random.choice(best_nodes)
 
 
 class MCTSHinterSearch:
@@ -326,8 +336,8 @@ class MCTSHinterSearch:
         self.memory = MCTSMemory(m_size)
         self.utility = []
         self.total_cnt = 0
-
-        self.prediction_net = ValueNet(config.MCTS_INPUT_SIZE).to(config.CPU_DEVICE_NAME)
+        # # 计算可用度用的(也就是b_v)
+        self.prediction_net = JoinOrderEstimator(config.MCTS_INPUT_SIZE).to(config.CPU_DEVICE_NAME)
         # # optimizer and loss function
         self.optimizer = optim.Adam(self.prediction_net.parameters(), lr=3e-4, betas=(0.9, 0.999))
         self.loss_function = F.smooth_l1_loss
@@ -346,13 +356,13 @@ class MCTSHinterSearch:
                 nn.init.uniform_(param)
 
     def find_candidate_hints(self, number_of_tables, query_encode, all_joins,
-                             joins_with_predicate, nodes, depth=2):
+                             joins_with_predicate, depth=2):
         self.total_cnt += 1
         self.utility = list()
         if self.total_cnt % 20 == 0:
             self.save_model()
 
-        state = PlanState(number_of_tables, query_encode, all_joins, joins_with_predicate, nodes)
+        state = PlanState(number_of_tables, query_encode, all_joins, joins_with_predicate)
 
         mcts = MCTS(iteration_limit=int(len(state.get_possible_actions()) * config.SEARCH_SIZE),
                     rollout_policy=self.random_policy)
@@ -385,6 +395,7 @@ class MCTSHinterSearch:
     def train(self, tree_feature: torch.Tensor, sql_vec: np.ndarray, target_value: int, alias_set: set[int]):
         """
             train one iteration
+            对预测网络进行训练
         @param tree_feature:
         @param sql_vec:
         @param target_value:
@@ -393,6 +404,12 @@ class MCTSHinterSearch:
         """
 
         def plan_to_count(tree_feat):
+            """
+                这个是不是得到了一个 join_order ?
+            @param tree_feat:
+            @return:
+            """
+
             def recursive(feat):
                 if isinstance(feat[1], tuple):
                     alias_list0 = recursive(feat=feat[1])
@@ -427,7 +444,9 @@ class MCTSHinterSearch:
         if target_value > config.MAX_TIME_OUT:
             target_value = config.MAX_TIME_OUT
 
+        # # label中带有训练
         label = torch.tensor([(self.flog(target_value)) * 10], device=config.CPU_DEVICE_NAME, dtype=torch.float32)
+        # # loss中是有迭代的
         loss_value = self.loss(v=prediction_res, target=label, optimize=True)
 
         self.memory.push(sql_vector_tensor, tree_alias_tensor, label)
@@ -490,7 +509,7 @@ class MCTSHinterSearch:
         order_list_repr = torch.tensor(state.order_list, dtype=torch.long).to(config.CPU_DEVICE_NAME)
 
         start_time = time.time()
-
+        # # eval to get reward(benefit)
         with torch.no_grad():
             prediction_res = self.prediction_net(sql_vector_repr, order_list_repr)
         prediction = prediction_res.detach().cpu().numpy()[0][0] / 10

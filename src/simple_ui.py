@@ -6,10 +6,46 @@ import pandas as pd
 import streamlit as st
 import st_aggrid
 
+import src.config as config
+from src.encoding import TreeBuilder, SQLEncoder
+from src.hints import HyperQO
+from src.mcts import MCTSHinterSearch
+from src.net import TreeNet
+from src.tree_lstm import SPINN
+
 st.set_page_config(page_title="查询优化-展示界面")
 
 
+def get_hyper_qo_instance():
+    random.seed(113)
+
+    tree_builder = TreeBuilder()
+
+    value_network = SPINN(head_num=config.NET_HEAD_NUM,
+                          input_size=7 + 2,
+                          hidden_size=config.NET_HIDDEN_SIZE,
+                          table_num=50,
+                          sql_size=40 * 40 + config.MAX_COLUMN_ID).to(config.DEVICE_NAME)
+
+    tree_net = TreeNet(tree_builder=tree_builder, value_network=value_network)
+    mcts_searcher = MCTSHinterSearch()
+
+    hint_generator = HyperQO(tree_net=tree_net,
+                             sql2vec=SQLEncoder(),
+                             value_extractor=tree_builder.value_extractor,
+                             mcts_searcher=mcts_searcher)
+    return hint_generator
+
+
+DEFAULT_HINT_GENERATOR = get_hyper_qo_instance()
+
+
 def get_all_query_plans(sql):
+    (pg_plan_time, pg_latency,
+     mcts_time, hinter_plan_time, mphe_time, hinter_latency,
+     actual_plans, actual_time,
+     chosen_leading_pairs) = DEFAULT_HINT_GENERATOR.optimize(sql)
+    res = []
     return [
         [1, 'cost-based', 0.1, 0.2, 90],
         [2, 'rule-based(/*-leading(nt, c))', 0.2, 0.3, 80],
