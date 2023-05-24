@@ -4,10 +4,6 @@
 
 > [1] Postgresql学习04-pg_hint_plan安装及使用、Sql优化小知识 https://blog.csdn.net/qq_45111959/article/details/125850787
 
-# Development
-
-    This is the code for the hyperQO: "Cost-based or Learning-based? A Hybrid Query Optimizer for Query Plan Selection" paper. This is an experimental version, and we will release a code in the form of a PostgreSQL plug-in in the future to realize parallel computing and reduce planning overhead.
-
 # Requirements
 
 - Pytorch 1.0
