@@ -68,12 +68,6 @@ class TimerRecord:
                                                self.chosen_plan_list[item], self.hinter_time_list[item])
 
 
-class QueryPlan:
-    def __init__(self, plan_json: dict, leading: typing.Optional[str] = None):
-        self.plan_json = plan_json
-        self.leading = leading
-
-
 class HyperQO:
     def __init__(self, tree_net: TreeNet,
                  sql2vec: SQLEncoder,
