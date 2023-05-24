@@ -31,18 +31,17 @@
 
 ### 基本过程
 
-![img_2.png](data/pic/Overview.png)
+![Overview.png](data/pic/Overview.png)
 
-![img_3.png](data/pic/Overview2.png)
+![Overview2.png](data/pic/Overview2.png)
 
 ### 候选查询计划: MCTS
 
-MCTS 获取候选查询计划
-![img_5.png](data/pic/mcts.png)
+![mcts.png](data/pic/mcts.png)
 
 ### 最优计划选择
 
-![img_6.png](data/pic/select_optimal.png)
+![select_optimal.png](data/pic/select_optimal.png)
 
 ## 项目配置
 
